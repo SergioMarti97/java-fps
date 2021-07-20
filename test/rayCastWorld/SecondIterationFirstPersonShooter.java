@@ -19,9 +19,9 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
 
     private HashMap<Integer, Object> objects;
 
-    private final float fieldOfView = (float) (Math.PI / 4.0f);
+    private final float fieldOfView = (float) (Math.PI / 3.0f);
 
-    private final float depth = 16.0f;
+    private final float depth = 20.0f;
 
     private Vec2df playerPos;
 
@@ -32,8 +32,6 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
     private Image imgMario;
 
     private float[] depthBuffer;
-
-    private final float divideByFOV = 2.0f;
 
     @Override
     public void initialize(GameContainer gc) {
@@ -77,7 +75,7 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
         mapSize = new Vec2di(64, 32);
 
         playerPos = new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f);
-        playerAngle = 0.0f;
+        playerAngle = 90.0f;
 
         imgWall = new Image("/block.png");
         imgMario = new Image("/mario.png");
@@ -126,6 +124,9 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
         renderObjects(gc);
     }
 
+    /**
+     * DDA Algorithm
+     */
     private boolean castRayDDA(Vec2df origin, Vec2df direction, TileHit hit) {
         // Se calcula el incremento de X y de Y
         float yDivideByX = direction.getY() / direction.getX();
@@ -246,137 +247,65 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
 
                     hit.setHitPos(intersection);
                     hit.setSampleX(sampleX);
-                    hit.setLength(distanceWall);
                 }
             }
         }
+        hit.setLength(distanceWall);
         return hitWall;
     }
 
+    /**
+     * For floors and ceilings, we don't use the ray, instead we just
+     * pseudo-project a plane, a la Mode 7.
+     * First calculate depth into screen...
+     */
+    private float getPlaneZCeiling(int y, int height) {
+        return (height / 2.0f) / ((height / 2.0f) - (float)y);
+    }
+
+    private float getPlaneZFloor(int y, int height) {
+        return  (height / 2.0f) / ((float)y - (height / 2.0f));
+    }
+
+    /**
+     * ... then project polar coordinate (r, theta) from camera into screen (x, y), again
+     * compensating with cosine to remove fisheye
+     */
+    private Vec2df getSampleMode7(Vec2df rayDirection, float rayAngle, float planeZ) {
+        Vec2df planePoint = new Vec2df(
+                playerPos.getX() + rayDirection.getX() * planeZ * 2.0f / (float)Math.cos(rayAngle - playerAngle),
+                playerPos.getY() + rayDirection.getY() * planeZ * 2.0f / (float)Math.cos(rayAngle - playerAngle)
+        );
+
+        int planeTileX = (int)planePoint.getX();
+        int planeTileY = (int)planePoint.getY();
+
+        return new Vec2df(Math.abs(planePoint.getX() - planeTileX), Math.abs(planePoint.getY() - planeTileY));
+    }
+
+    private Vec2df getSampleCeiling(int y, int height, Vec2df rayDirection, float rayAngle) {
+        return getSampleMode7(rayDirection, rayAngle, getPlaneZCeiling(y, height));
+    }
+
+    private Vec2df getSampleFloor(int y, int height, Vec2df rayDirection, float rayAngle) {
+        return getSampleMode7(rayDirection, rayAngle, getPlaneZFloor(y, height));
+    }
+
+    /**
+     * This method render the walls, ceiling and floor
+     */
     private void renderWalls(GameContainer gc) {
         // For each column on screen
         for ( int x = 0; x < gc.getRenderer().getW(); x++ ) {
 
             // La dirección del rayo se podría calcular cada vez que se
             // modifica el ángulo del jugador
-            float rayAngle = (playerAngle - fieldOfView / divideByFOV) + ((float)x / (float)gc.getRenderer().getW()) * fieldOfView;
+            float rayAngle = (playerAngle - fieldOfView / 2.0f) + ((float)x / (float)gc.getRenderer().getW()) * fieldOfView;
 
-            // Algoritmo DDA
             Vec2df rayDirection = new Vec2df((float)Math.sin(rayAngle), (float)Math.cos(rayAngle));
 
-            // Se calcula el incremento de X y de Y
-            /*float yDivideByX = rayDirection.getY() / rayDirection.getX();
-            float xDivideByY = rayDirection.getX() / rayDirection.getY();
-            Vec2df rayDelta = new Vec2df(
-                    (float)Math.sqrt(1 + (yDivideByX * yDivideByX)),
-                    (float)Math.sqrt(1 + (xDivideByY * xDivideByY))
-            );
-
-            Vec2di mapCheck = new Vec2di((int)playerPos.getX(), (int)playerPos.getY());
-
-            Vec2df rayLength1D = new Vec2df();
-            Vec2di stepDistance = new Vec2di();
-
-            if ( rayDirection.getX() < 0 ) {
-                stepDistance.setX(-1);
-                rayLength1D.setX((playerPos.getX() - (float)mapCheck.getX()) * rayDelta.getX());
-            } else {
-                stepDistance.setX(1);
-                rayLength1D.setX(((float)(mapCheck.getX() + 1) - playerPos.getX()) * rayDelta.getX());
-            }
-
-            if ( rayDirection.getY() < 0 ) {
-                stepDistance.setY(-1);
-                rayLength1D.setY((playerPos.getY() - (float)mapCheck.getY()) * rayDelta.getY());
-            } else {
-                stepDistance.setY(1);
-                rayLength1D.setY(((float)(mapCheck.getY() + 1) - playerPos.getY()) * rayDelta.getY());
-            }
-
-            float distanceWall = 0;
-            boolean hitWall = false;
-            float sampleX = 0.0f;
-            while ( !hitWall && distanceWall < depth ) {
-                if ( rayLength1D.getX() < rayLength1D.getY() ) {
-                    mapCheck.addToX(stepDistance.getX());
-                    distanceWall = rayLength1D.getX();
-                    rayLength1D.addToX(rayDelta.getX());
-                } else {
-                    mapCheck.addToY(stepDistance.getY());
-                    distanceWall = rayLength1D.getY();
-                    rayLength1D.addToY(rayDelta.getY());
-                }
-
-                if ( mapCheck.getX() < 0 || mapCheck.getX() >= mapSize.getX() ||
-                        mapCheck.getY() < 0 || mapCheck.getY() >= mapSize.getY() ) {
-                    hitWall = true;
-                    distanceWall = depth;
-                } else {
-                    if ( map.toCharArray()[mapCheck.getY() * mapSize.getX() + mapCheck.getX()] == '#' ) {
-                        hitWall = true;
-
-                        Vec2df intersection = new Vec2df();
-
-                        float m = rayDirection.getY() / rayDirection.getX();
-
-                        if ( playerPos.getY() <= mapCheck.getY() ) {
-                            if ( playerPos.getX() <= mapCheck.getX() ) { // West
-                                intersection.setY(m * (mapCheck.getX() - playerPos.getX()) + playerPos.getY());
-                                intersection.setX((float)(mapCheck.getX()));
-                                sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
-                            } else if ( playerPos.getX() >= (mapCheck.getX() + 1) ) { // East
-                                intersection.setY(m * ((mapCheck.getX() + 1) - playerPos.getX()) + playerPos.getY());
-                                intersection.setX((float)(mapCheck.getX() + 1));
-                                sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
-                            } else { // Norte
-                                intersection.setY((float)mapCheck.getY());
-                                intersection.setX((mapCheck.getY() - playerPos.getY()) / m + playerPos.getX());
-                                sampleX = intersection.getX() - (float)Math.floor(intersection.getX());
-                            }
-
-                            if ( intersection.getY() < mapCheck.getY() ) { // North? or South?
-                                intersection.setY((float)mapCheck.getY());
-                                intersection.setX((mapCheck.getY() - playerPos.getY()) / m + playerPos.getX());
-                                sampleX = intersection.getX() - (float)Math.floor(intersection.getX());
-                            }
-                        } else if ( playerPos.getY() >= mapCheck.getY() + 1 ) {
-                            if ( playerPos.getX() <= mapCheck.getX() ) { // West
-                                intersection.setY(m * (mapCheck.getX() - playerPos.getX()) + playerPos.getY());
-                                intersection.setX((float)mapCheck.getX());
-                                sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
-                            } else if ( playerPos.getX() >= (mapCheck.getX() + 1) ) { // East
-                                intersection.setY(m * ((mapCheck.getX() + 1) - playerPos.getX()) + playerPos.getY());
-                                intersection.setX((float)(mapCheck.getX() + 1));
-                                sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
-                            } else { // South
-                                intersection.setY((float)(mapCheck.getY() + 1));
-                                intersection.setX(((mapCheck.getY() + 1) - playerPos.getY()) / m + playerPos.getX());
-                                sampleX = intersection.getX() - (float)Math.floor(intersection.getX());
-                            }
-
-                            if ( intersection.getY() > (mapCheck.getY() + 1) ) { // South? or North?
-                                intersection.setY((float)(mapCheck.getY() + 1));
-                                intersection.setX(((mapCheck.getY() + 1)- playerPos.getY()) / m + playerPos.getX());
-                                sampleX = intersection.getX() - (float)Math.floor(intersection.getX());
-                            }
-                        } else {
-                            if ( playerPos.getX() <= mapCheck.getX() ) { // West
-                                intersection.setY(m * (mapCheck.getX() - playerPos.getX()) + playerPos.getY());
-                                intersection.setX((float)(mapCheck.getX()));
-                                sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
-                            } else if ( playerPos.getX() >= (mapCheck.getX() + 1) ) { // East
-                                intersection.setY(m * ((mapCheck.getX() + 1) - playerPos.getX()) + playerPos.getY());
-                                intersection.setX((float)(mapCheck.getX() + 1));
-                                sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
-                            }
-                        }
-
-                    }
-                }
-            }*/
-
             TileHit hit = new TileHit();
-            float distanceWall = Integer.MAX_VALUE;
+            float distanceWall = depth;
             if ( castRayDDA(playerPos, rayDirection, hit) ) {
                 Vec2df ray = new Vec2df(
                         hit.getHitPos().getX() - playerPos.getX(),
@@ -388,7 +317,6 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
             float ceiling = (gc.getRenderer().getH() / 2.0f) - (gc.getRenderer().getH() / distanceWall);
             float floor = gc.getRenderer().getH() - ceiling;
             float wallHeight = floor - ceiling;
-            float floorHeight = gc.getRenderer().getH() - floor;
 
             // depth buffer
             depthBuffer[x] = distanceWall;
@@ -398,25 +326,8 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
 
             for ( int y = 0; y < gc.getRenderer().getH(); y++ ) {
                 if ( y <= (int)ceiling ) { // ceiling
-                    // For floors and ceilings, we don't use the ray, instead we just
-                    // pseudo-project a plane, a la Mode 7.
-                    // First calculate depth into scree...
-                    float planeZ = (gc.getRenderer().getH() / 2.0f) / ((gc.getRenderer().getH() / 2.0f) - (float)y);
-
-                    // ... then project polar coordinate (r, theta) from camera into screen (x, y), again
-                    // compensating with cosine to remove fisheye
-                    Vec2df planePoint = new Vec2df(
-                            playerPos.getX() + rayDirection.getX() * planeZ * 2.0f / (float)Math.cos(rayAngle - playerAngle),
-                            playerPos.getY() + rayDirection.getY() * planeZ * 2.0f / (float)Math.cos(rayAngle - playerAngle)
-                    );
-
-                    int planeTileX = (int)planePoint.getX();
-                    int planeTileY = (int)planePoint.getY();
-
-                    float planeSampleX = Math.abs(planePoint.getX() - planeTileX);
-                    float planeSampleY = Math.abs(planePoint.getY() - planeTileY);
-
-                    int sampleColor = imgWall.getSample(planeSampleX, planeSampleY);
+                    Vec2df sample = getSampleCeiling(y, gc.getRenderer().getH(), rayDirection, rayAngle);
+                    int sampleColor = imgWall.getSample(sample.getX(), sample.getY());
 
                     int r = sampleColor >> 16 & 0xff;
                     int g = sampleColor >> 8 & 0xff;
@@ -431,7 +342,6 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
                 } else if (y > (int)ceiling && y <= (int)floor ) { // wall
                     float sampleY = ( (float)y - ceiling ) / wallHeight;
                     int sampleColor = imgWall.getSample(hit.getSampleX(), sampleY);
-                    //int sampleColor = imgWall.getSample(sampleX, sampleY);
 
                     int r = sampleColor >> 16 & 0xff;
                     int g = sampleColor >> 8 & 0xff;
@@ -440,27 +350,9 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
                     int shadedColor = (0xff << 24 | (int) (r * value) << 16 | (int) (g * value) << 8 | (int) (b * value));
                     gc.getRenderer().setPixel(x, y, shadedColor);
                 } else { // floor
-                    //int sampleColor = imgWall.getSample(hit.getSampleX(), sampleY);
-                    //int floorColor = (int)(255 * value2);
-                    // For floors and ceilings, we don't use the ray, instead we just
-                    // pseudo-project a plane, a la Mode 7.
-                    // First calculate depth into scree...
-                    float planeZ = (gc.getRenderer().getH() / 2.0f) / ((float)y - (gc.getRenderer().getH() / 2.0f));
+                    Vec2df sample = getSampleFloor(y, gc.getRenderer().getH(), rayDirection, rayAngle);
+                    int sampleColor = imgWall.getSample(sample.getX(), sample.getY());
 
-                    // ... then project polar coordinate (r, theta) from camera into screen (x, y), again
-                    // compensating with cosine to remove fisheye
-                    Vec2df planePoint = new Vec2df(
-                            playerPos.getX() + rayDirection.getX() * planeZ * 2.0f / (float)Math.cos(rayAngle - playerAngle),
-                            playerPos.getY() + rayDirection.getY() * planeZ * 2.0f / (float)Math.cos(rayAngle - playerAngle)
-                    );
-
-                    int planeTileX = (int)planePoint.getX();
-                    int planeTileY = (int)planePoint.getY();
-
-                    float planeSampleX = Math.abs(planePoint.getX() - planeTileX);
-                    float planeSampleY = Math.abs(planePoint.getY() - planeTileY);
-
-                    int sampleColor = imgWall.getSample(planeSampleX, planeSampleY);
                     int r = sampleColor >> 16 & 0xff;
                     int g = sampleColor >> 8 & 0xff;
                     int b = sampleColor & 0xff;
@@ -475,6 +367,9 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
         }
     }
 
+    /**
+     * This method renders all objects on screen
+     */
     private void renderObjects(GameContainer gc) {
         for (Map.Entry<Integer, Object> e : objects.entrySet()) {
             Object object = e.getValue();
@@ -496,7 +391,7 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
             if ( objectAngle > 3.14159f ) {
                 objectAngle -= 2.0f * 3.14159f;
             }
-            boolean isInPlayerFOV = Math.abs(objectAngle) < (fieldOfView / divideByFOV);
+            boolean isInPlayerFOV = Math.abs(objectAngle) < (fieldOfView / 2.0f);
 
             if ( isInPlayerFOV && distanceToPlayer < depth && distanceToPlayer >= 0.5f ) {
                 float objectCeiling = (float)(gc.getRenderer().getH() / 2.0) - gc.getRenderer().getH() / distanceToPlayer;
@@ -505,7 +400,7 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
                 float objectAspectRatio = (float)imgMario.getH() / (float)imgMario.getW();
                 float objectWidth = objectHeight / objectAspectRatio;
 
-                float middleOfObject = (0.5f * (objectAngle / (fieldOfView / divideByFOV)) + 0.5f) * gc.getRenderer().getW();
+                float middleOfObject = (0.5f * (objectAngle / (fieldOfView / 2.0f)) + 0.5f) * gc.getRenderer().getW();
 
                 // Draw the object
                 for ( float x = 0; x < objectWidth; x++ ) {
