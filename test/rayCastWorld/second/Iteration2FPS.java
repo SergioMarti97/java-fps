@@ -1,4 +1,4 @@
-package rayCastWorld;
+package rayCastWorld.second;
 
 import game.AbstractGame;
 import game.GameContainer;
@@ -6,12 +6,15 @@ import game.gfx.Image;
 import javafx.scene.input.KeyCode;
 import points2d.Vec2df;
 import points2d.Vec2di;
+import rayCastWorld.CellSide;
+import rayCastWorld.Object;
+import rayCastWorld.TileHit;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SecondIterationFirstPersonShooter implements AbstractGame {
+public class Iteration2FPS implements AbstractGame {
 
     private String map = "";
 
@@ -185,60 +188,60 @@ public class SecondIterationFirstPersonShooter implements AbstractGame {
 
                     if ( origin.getY() <= mapCheck.getY() ) {
                         if ( origin.getX() <= mapCheck.getX() ) { // West
-                            hit.setSide(Engine.CellSide.WEST);
+                            hit.setSide(CellSide.WEST);
                             intersection.setY(m * (mapCheck.getX() - origin.getX()) + origin.getY());
                             intersection.setX((float)(mapCheck.getX()));
                             sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
                         } else if ( origin.getX() >= (mapCheck.getX() + 1) ) { // East
-                            hit.setSide(Engine.CellSide.EAST);
+                            hit.setSide(CellSide.EAST);
                             intersection.setY(m * ((mapCheck.getX() + 1) - origin.getX()) + origin.getY());
                             intersection.setX((float)(mapCheck.getX() + 1));
                             sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
                         } else { // Norte
-                            hit.setSide(Engine.CellSide.NORTH);
+                            hit.setSide(CellSide.NORTH);
                             intersection.setY((float)mapCheck.getY());
                             intersection.setX((mapCheck.getY() - origin.getY()) / m + origin.getX());
                             sampleX = intersection.getX() - (float)Math.floor(intersection.getX());
                         }
 
                         if ( intersection.getY() < mapCheck.getY() ) { // North? or South?
-                            hit.setSide(Engine.CellSide.SOUTH);
+                            hit.setSide(CellSide.SOUTH);
                             intersection.setY((float)mapCheck.getY());
                             intersection.setX((mapCheck.getY() - origin.getY()) / m + origin.getX());
                             sampleX = intersection.getX() - (float)Math.floor(intersection.getX());
                         }
                     } else if ( origin.getY() >= mapCheck.getY() + 1 ) {
                         if ( origin.getX() <= mapCheck.getX() ) { // West
-                            hit.setSide(Engine.CellSide.WEST);
+                            hit.setSide(CellSide.WEST);
                             intersection.setY(m * (mapCheck.getX() - origin.getX()) + origin.getY());
                             intersection.setX((float)mapCheck.getX());
                             sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
                         } else if ( origin.getX() >= (mapCheck.getX() + 1) ) { // East
-                            hit.setSide(Engine.CellSide.EAST);
+                            hit.setSide(CellSide.EAST);
                             intersection.setY(m * ((mapCheck.getX() + 1) - origin.getX()) + origin.getY());
                             intersection.setX((float)(mapCheck.getX() + 1));
                             sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
                         } else { // South
-                            hit.setSide(Engine.CellSide.SOUTH);
+                            hit.setSide(CellSide.SOUTH);
                             intersection.setY((float)(mapCheck.getY() + 1));
                             intersection.setX(((mapCheck.getY() + 1) - origin.getY()) / m + origin.getX());
                             sampleX = intersection.getX() - (float)Math.floor(intersection.getX());
                         }
 
                         if ( intersection.getY() > (mapCheck.getY() + 1) ) { // South? or North?
-                            hit.setSide(Engine.CellSide.NORTH);
+                            hit.setSide(CellSide.NORTH);
                             intersection.setY((float)(mapCheck.getY() + 1));
                             intersection.setX(((mapCheck.getY() + 1)- origin.getY()) / m + origin.getX());
                             sampleX = intersection.getX() - (float)Math.floor(intersection.getX());
                         }
                     } else {
                         if ( origin.getX() <= mapCheck.getX() ) { // West
-                            hit.setSide(Engine.CellSide.WEST);
+                            hit.setSide(CellSide.WEST);
                             intersection.setY(m * (mapCheck.getX() - origin.getX()) + origin.getY());
                             intersection.setX((float)(mapCheck.getX()));
                             sampleX = intersection.getY() - (float)Math.floor(intersection.getY());
                         } else if ( origin.getX() >= (mapCheck.getX() + 1) ) { // East
-                            hit.setSide(Engine.CellSide.EAST);
+                            hit.setSide(CellSide.EAST);
                             intersection.setY(m * ((mapCheck.getX() + 1) - origin.getX()) + origin.getY());
                             intersection.setX((float)(mapCheck.getX() + 1));
                             sampleX = intersection.getY() - (float)Math.floor(intersection.getY());

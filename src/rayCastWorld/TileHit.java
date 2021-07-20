@@ -17,13 +17,13 @@ public class TileHit {
 
     private float sampleX = 0.0f;
 
-    private Engine.CellSide side = Engine.CellSide.NORTH;
+    private CellSide side = CellSide.NORTH;
 
     public TileHit() {
 
     }
 
-    public TileHit(Vec2di tilePos, Vec2df hitPos, float length, float sampleX, Engine.CellSide side) {
+    public TileHit(Vec2di tilePos, Vec2df hitPos, float length, float sampleX, CellSide side) {
         this.tilePos = tilePos;
         this.hitPos = hitPos;
         this.length = length;
@@ -63,11 +63,11 @@ public class TileHit {
         this.sampleX = sampleX;
     }
 
-    public Engine.CellSide getSide() {
+    public CellSide getSide() {
         return side;
     }
 
-    public void setSide(Engine.CellSide side) {
+    public void setSide(CellSide side) {
         this.side = side;
     }
 

@@ -5,6 +5,7 @@ import game.GameContainer;
 import javafx.scene.image.Image;
 import points2d.Vec2df;
 import points2d.Vec2di;
+import rayCastWorld.CellSide;
 import rayCastWorld.Engine;
 import rayCastWorld.Object;
 
@@ -71,7 +72,7 @@ public class FirstPersonShooterGame implements AbstractGame {
 
         engine = new Engine(gc.getRenderer().getW(), gc.getRenderer().getH(), 50.0f) {
             @Override
-            public int selectSceneryPixel(int tileX, int tileY, Engine.CellSide side, float sampleX, float sampleY, float distance) {
+            public int selectSceneryPixel(int tileX, int tileY, CellSide side, float sampleX, float sampleY, float distance) {
                 int p = 0;
                 switch ( side ) {
                     case TOP:
@@ -128,7 +129,7 @@ public class FirstPersonShooterGame implements AbstractGame {
             }
 
             @Override
-            public void handleObjectVsScenery(Object object, int tileX, int tileY, Engine.CellSide side, float offsetX, float offsetY) {
+            public void handleObjectVsScenery(Object object, int tileX, int tileY, CellSide side, float offsetX, float offsetY) {
 
             }
 

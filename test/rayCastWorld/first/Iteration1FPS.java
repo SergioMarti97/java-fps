@@ -1,15 +1,15 @@
-package rayCastWorld;
+package rayCastWorld.first;
 
 import game.AbstractGame;
 import game.GameContainer;
-import game.gfx.Image;
 import javafx.scene.input.KeyCode;
 import javafx.util.Pair;
-import points2d.*;
+import points2d.Vec2df;
+import points2d.Vec2di;
 
 import java.util.ArrayList;
 
-public class FirstIterationFirstPersonShooter implements AbstractGame {
+public class Iteration1FPS implements AbstractGame {
 
     private final Vec2df playerPos = new Vec2df(8, 6);
 

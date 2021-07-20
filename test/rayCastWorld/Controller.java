@@ -3,6 +3,7 @@ package rayCastWorld;
 import game.GameContainer;
 import javafx.fxml.Initializable;
 import javafx.scene.image.ImageView;
+import rayCastWorld.third.Iteration3FPS;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -13,7 +14,7 @@ public class Controller implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        SecondIterationFirstPersonShooter fps = new SecondIterationFirstPersonShooter();
+        Iteration3FPS fps = new Iteration3FPS();
         GameContainer gc = new GameContainer(
                 fps,
                 (int) imgView.getFitWidth(),

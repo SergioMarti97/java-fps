@@ -13,15 +13,6 @@ import java.util.Map;
  */
 public abstract class Engine {
 
-    public enum CellSide {
-        NORTH,
-        EAST,
-        SOUTH,
-        WEST,
-        TOP,
-        BOTTOM
-    }
-
     /**
      * The objects of the world
      */
