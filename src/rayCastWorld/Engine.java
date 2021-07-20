@@ -380,7 +380,6 @@ public abstract class Engine {
         }
 
         Vec2df intersection = new Vec2df();
-        Vec2di hitTile;
         float maxDistance = 100.0f;
         float distance = 0.0f;
         boolean tileFound = false;
@@ -402,7 +401,6 @@ public abstract class Engine {
             distance = rayDist.mag();*/
 
             if ( isLocationSolid((float)mapCheck.getX(), (float)mapCheck.getY()) ) {
-                hitTile = new Vec2di(mapCheck);
                 tileFound = true;
                 hit.setTilePos(mapCheck);
                 hit.setLength(distance);
