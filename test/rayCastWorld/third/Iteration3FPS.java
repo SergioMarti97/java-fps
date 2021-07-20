@@ -1,6 +1,5 @@
 package rayCastWorld.third;
 
-import game.AbstractGame;
 import game.GameContainer;
 import game.gfx.Image;
 import game.gfx.ImageTile;
@@ -8,16 +7,14 @@ import javafx.scene.input.KeyCode;
 import points2d.Vec2df;
 import points2d.Vec2di;
 import rayCastWorld.CellSide;
-import rayCastWorld.Engine2;
+import rayCastWorld.RayCastingWorldGame;
 import rayCastWorld.Object;
 
-public class Iteration3FPS implements AbstractGame {
+public class Iteration3FPS extends RayCastingWorldGame {
 
     private String map = "";
 
     private Vec2di mapSize;
-    
-    private Engine2 rcw;
 
     private Image imgWall;
 
@@ -25,10 +22,10 @@ public class Iteration3FPS implements AbstractGame {
 
     private Image imgMario;
 
-    private ImageTile imageTile;
-    
     @Override
     public void initialize(GameContainer gc) {
+        super.initialize(gc);
+        
         map =
                 "################################################################" +
                         "#.........#....................##..............................#" +
@@ -64,79 +61,89 @@ public class Iteration3FPS implements AbstractGame {
                         "################################################################";
 
         mapSize = new Vec2di(64, 32);
-        
-        rcw = new Engine2() {
-            @Override
-            public boolean isLocationSolid(float x, float y) {
-                return map.toCharArray()[(int)y * mapSize.getX() + (int)x] == '#';
-            }
+                
+        playerPos.setX(mapSize.getX() / 2.0f); 
+        playerPos.setY(mapSize.getY() / 2.0f);
 
-            @Override
-            public int selectSceneryPixel(
-                    int planeTileX, 
-                    int planeTileY, 
-                    CellSide side, 
-                    float planeSampleX, 
-                    float planeSampleY, 
-                    float planeSampleZ
-            ) {
-                int pixel;
-                switch (side) {
-                    default:
-                        pixel = imgWall.getSample(planeSampleX, planeSampleY);
-                        break;
-                    case BOTTOM:
-                        pixel = imgFloor.getSample(planeSampleX, planeSampleY);
-                        break;
-                    case TOP:
-                        pixel = 0xff00ffff;
-                        break;
-                }
+        imgMario = new Image("/mario.png");
+        ImageTile imageTile = new ImageTile("dungeon/dg_features32.png", 32, 32);
+        imgWall = imageTile.getTileImage(3, 0);
+        imgFloor = imageTile.getTileImage(0, 5);
 
-                float shadow = 1.0f - Math.min(planeSampleZ / this.getDepth(), 1.0f);
+        objects.put(0, new Object(0, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f + 3.0f)));
+    }
 
-                switch ( side ) {
+    @Override
+    public boolean isLocationSolid(float x, float y) {
+        return map.toCharArray()[(int)y * mapSize.getX() + (int)x] == '#';
+    }
+
+    @Override
+    public int selectSceneryPixel(
+            int planeTileX,
+            int planeTileY,
+            CellSide side,
+            float planeSampleX,
+            float planeSampleY,
+            float planeSampleZ
+    ) {
+        int pixel;
+        switch (side) {
+            default:
+                pixel = imgWall.getSample(planeSampleX, planeSampleY);
+                break;
+            case BOTTOM:
+                pixel = imgFloor.getSample(planeSampleX, planeSampleY);
+                break;
+            case TOP:
+                pixel = 0xff00ffff;
+                break;
+        }
+
+        float shadow = 1.0f - Math.min(planeSampleZ / this.getDepth(), 1.0f);
+
+                /*switch ( side ) {
                     case SOUTH: case EAST:
                         shadow *= 0.3f;
                         break;
-                }
+                }*/
 
-                int r = pixel >> 16 & 0xff;
-                int g = pixel >> 8 & 0xff;
-                int b = pixel & 0xff;
+                /*Vec2df marioPos = getObjects().get(0).getPos();
+                Vec2df pixelPos = new Vec2df((float)planeTileX + planeSampleX, (float)planeTileY + planeSampleY);
 
-                return (0xff << 24 | (int) (r * shadow) << 16 | (int) (g * shadow) << 8 | (int) (b * shadow));
-            }
+                float marioDistance = (marioPos.getX() - pixelPos.getX()) * (marioPos.getX() - pixelPos.getX()) +
+                        (marioPos.getY() - pixelPos.getY()) * (marioPos.getY() - pixelPos.getY());
 
-            @Override
-            public int selectObjectPixel(
-                    int id, 
-                    float sampleX, 
-                    float sampleY, 
-                    float distanceToObject, 
-                    float niceAngle
-            ) {
-                return imgMario.getSample(sampleX, sampleY);
-            }
+                float marioLight = Math.max(0.2f, 1.0f - Math.min(marioDistance / 10.0f, 1.0f));
 
-            @Override
-            public float getObjectWidth(int id) {
-                return 1;
-            }
+                shadow *= marioLight;*/
 
-            @Override
-            public float getObjectHeight(int id) {
-                return 1;
-            }
-        };
-        rcw.init(gc, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f), 0.0f);
+        int r = pixel >> 16 & 0xff;
+        int g = pixel >> 8 & 0xff;
+        int b = pixel & 0xff;
 
-        imgMario = new Image("/mario.png");
-        imageTile = new ImageTile("dungeon/dg_features32.png", 32, 32);
-        imgWall = imageTile.getTileImage(3, 0);
-        imgFloor = imageTile.getTileImage(0, 5);
-        
-        rcw.getObjects().put(0, new Object(0, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f + 3.0f)));
+        return (0xff << 24 | (int) (r * shadow) << 16 | (int) (g * shadow) << 8 | (int) (b * shadow));
+    }
+
+    @Override
+    public int selectObjectPixel(
+            int id,
+            float sampleX,
+            float sampleY,
+            float distanceToObject,
+            float niceAngle
+    ) {
+        return imgMario.getSample(sampleX, sampleY);
+    }
+
+    @Override
+    public float getObjectWidth(int id) {
+        return 0.5f;
+    }
+
+    @Override
+    public float getObjectHeight(int id) {
+        return 0.5f;
     }
 
     @Override
@@ -145,37 +152,32 @@ public class Iteration3FPS implements AbstractGame {
         final float rotVel = 1.5f;
 
         if ( gc.getInput().isKeyHeld(KeyCode.D) ) {
-            rcw.setPlayerAngle(rcw.getPlayerAngle() + rotVel * elapsedTime);
+            playerAngle += rotVel * elapsedTime;
         }
 
         if ( gc.getInput().isKeyHeld(KeyCode.A) ) {
-            rcw.setPlayerAngle(rcw.getPlayerAngle() - rotVel * elapsedTime);
+            playerAngle -= rotVel * elapsedTime;
         }
 
         if ( gc.getInput().isKeyHeld(KeyCode.W) ) {
-            rcw.getPlayerPos().addToX((float)Math.sin(rcw.getPlayerAngle()) * vel * elapsedTime);
-            rcw.getPlayerPos().addToY((float)Math.cos(rcw.getPlayerAngle()) * vel * elapsedTime);
+            playerPos.addToX((float)Math.sin(playerAngle) * vel * elapsedTime);
+            playerPos.addToY((float)Math.cos(playerAngle) * vel * elapsedTime);
         }
 
         if ( gc.getInput().isKeyHeld(KeyCode.S) ) {
-            rcw.getPlayerPos().addToX(-(float)Math.sin(rcw.getPlayerAngle()) * vel * elapsedTime);
-            rcw.getPlayerPos().addToY(-(float)Math.cos(rcw.getPlayerAngle()) * vel * elapsedTime);
+            playerPos.addToX(-(float)Math.sin(playerAngle) * vel * elapsedTime);
+            playerPos.addToY(-(float)Math.cos(playerAngle) * vel * elapsedTime);
         }
 
         if ( gc.getInput().isKeyHeld(KeyCode.Q) ) {
-            rcw.getPlayerPos().addToX((float)Math.sin(rcw.getPlayerAngle()) * vel * elapsedTime);
-            rcw.getPlayerPos().addToY(-(float)Math.cos(rcw.getPlayerAngle()) * vel * elapsedTime);
+            playerPos.addToX((float)Math.sin(playerAngle) * vel * elapsedTime);
+            playerPos.addToY(-(float)Math.cos(playerAngle) * vel * elapsedTime);
         }
 
         if ( gc.getInput().isKeyHeld(KeyCode.E) ) {
-            rcw.getPlayerPos().addToX(-(float)Math.sin(rcw.getPlayerAngle()) * vel * elapsedTime);
-            rcw.getPlayerPos().addToY((float)Math.cos(rcw.getPlayerAngle()) * vel * elapsedTime);
+            playerPos.addToX(-(float)Math.sin(playerAngle) * vel * elapsedTime);
+            playerPos.addToY((float)Math.cos(playerAngle) * vel * elapsedTime);
         }
     }
 
-    @Override
-    public void render(GameContainer gc) {
-        rcw.render(gc);
-    }
-    
 }
