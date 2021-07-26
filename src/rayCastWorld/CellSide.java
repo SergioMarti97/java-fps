@@ -7,8 +7,8 @@ package rayCastWorld;
  */
 public enum CellSide {
     NORTH,
-    EAST,
     SOUTH,
+    EAST,
     WEST,
     TOP,
     BOTTOM

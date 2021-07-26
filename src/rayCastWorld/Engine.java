@@ -1,8 +1,8 @@
 package rayCastWorld;
 
-import game.Renderer;
-import points2d.Vec2df;
-import points2d.Vec2di;
+import olcPGEApproach.gfx.Renderer;
+import olcPGEApproach.vectors.points2d.Vec2df;
+import olcPGEApproach.vectors.points2d.Vec2di;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,6 +10,7 @@ import java.util.Map;
 
 /**
  * The ray cast world engine
+ * @deprecated
  */
 public abstract class Engine {
 

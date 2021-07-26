@@ -1,6 +1,6 @@
 package rayCastWorld;
 
-import points2d.Vec2df;
+import olcPGEApproach.vectors.points2d.Vec2df;
 
 /**
  * Base class for objects that

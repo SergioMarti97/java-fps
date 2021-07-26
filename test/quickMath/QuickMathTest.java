@@ -1,6 +1,6 @@
 package quickMath;
 
-import rayCastWorld.QuickMath;
+import quickmath.QuickMath;
 
 public class QuickMathTest {
 

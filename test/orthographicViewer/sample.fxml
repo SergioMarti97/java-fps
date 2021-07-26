@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="orthographicViewer.OrthographicViewerController">
+    <center>
+        <GridPane alignment="center" hgap="10" vgap="10">
+            <ImageView fx:id="imgView" fitHeight="720.0" fitWidth="1280.0" focusTraversable="true" pickOnBounds="true" preserveRatio="true" />
+            <columnConstraints>
+                <ColumnConstraints />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints />
+            </rowConstraints>
+        </GridPane>
+    </center>
+</BorderPane>

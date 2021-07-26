@@ -1,6 +1,7 @@
 package rayCastWorld;
 
-import com.sun.javafx.geom.Vec2f;
+
+import olcPGEApproach.vectors.points2d.Vec2df;
 
 /**
  * This class represents a camera
@@ -11,7 +12,7 @@ public class Camera {
     /**
      * The position of the camera
      */
-    private Vec2f pos;
+    private Vec2df pos;
 
     /**
      * The angle of the camera
@@ -29,7 +30,7 @@ public class Camera {
      * @param angle the angle of the camera
      * @param fieldOfView the field of view of the camera
      */
-    public Camera(Vec2f pos, float angle, float fieldOfView) {
+    public Camera(Vec2df pos, float angle, float fieldOfView) {
         this.pos = pos;
         this.angle = angle;
         this.fieldOfView = fieldOfView;
@@ -39,11 +40,11 @@ public class Camera {
     * Getters and Setters
     */
 
-    public Vec2f getPos() {
+    public Vec2df getPos() {
         return pos;
     }
 
-    public void setPos(Vec2f pos) {
+    public void setPos(Vec2df pos) {
         this.pos = pos;
     }
 

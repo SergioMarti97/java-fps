@@ -1,9 +1,9 @@
 package rayCastWorld;
 
-import game.AbstractGame;
-import game.GameContainer;
-import points2d.Vec2df;
-import points2d.Vec2di;
+import olcPGEApproach.AbstractGame;
+import olcPGEApproach.GameContainer;
+import olcPGEApproach.vectors.points2d.Vec2df;
+import olcPGEApproach.vectors.points2d.Vec2di;
 
 import java.util.Arrays;
 import java.util.HashMap;
