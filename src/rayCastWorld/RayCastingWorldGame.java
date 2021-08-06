@@ -14,7 +14,7 @@ import java.util.Map;
  */
 public abstract class RayCastingWorldGame implements AbstractGame {
 
-    protected HashMap<Integer, Object> objects;
+    protected HashMap<Integer, ObjectRayCastWorld> objects;
 
     protected float depth = 32.0f;
 
@@ -271,106 +271,69 @@ public abstract class RayCastingWorldGame implements AbstractGame {
      * This method renders all objects on screen
      */
     private void renderObjects(GameContainer gc) {
-        for (Map.Entry<Integer, Object> e : objects.entrySet()) {
-            Object object = e.getValue();
+        for (Map.Entry<Integer, ObjectRayCastWorld> e : objects.entrySet()) {
+            renderObject(gc, e.getValue());
+        }
+    }
 
-            // Test if the object can be seen by the user
-            float vecX = object.getPos().getX() - playerPos.getX();
-            float vecY = object.getPos().getY() - playerPos.getY();
+    /**
+     * This method render the object passed by parameter
+     */
+    private void renderObject(GameContainer gc, ObjectRayCastWorld o) {
+        // Test if the object can be seen by the user
+        float vecX = o.getPos().getX() - playerPos.getX();
+        float vecY = o.getPos().getY() - playerPos.getY();
+        float distanceToPlayer = (float)Math.sqrt(vecX * vecX + vecY * vecY);
 
-            float distanceToPlayer = (vecX * vecX + vecY * vecY);
+        // Test if the object is in the field of view of the player
+        float eyeX = (float)Math.sin(playerAngle);
+        float eyeY = (float)Math.cos(playerAngle);
 
-            // Test if the object is in the field of view of the player
-            float eyeX = (float)Math.sin(playerAngle);
-            float eyeY = (float)Math.cos(playerAngle);
+        // Difference between to angles
+        float objectAngle = (float)(Math.atan2(eyeY, eyeX) - Math.atan2(vecY, vecX));
+        if ( objectAngle < -3.14159f ) {
+            objectAngle += 2.0f * 3.14159f;
+        }
+        if ( objectAngle > 3.14159f ) {
+            objectAngle -= 2.0f * 3.14159f;
+        }
+        boolean isInPlayerFOV = Math.abs(objectAngle) < (FOV / 2.0f);
 
-            // Difference between to angles
-            float objectAngle = (float)(Math.atan2(eyeY, eyeX) - Math.atan2(vecY, vecX));
-            if ( objectAngle < -3.14159f ) {
-                objectAngle += 2.0f * 3.14159f;
-            }
-            if ( objectAngle > 3.14159f ) {
-                objectAngle -= 2.0f * 3.14159f;
-            }
-            boolean isInPlayerFOV = Math.abs(objectAngle) < (FOV / 2.0f);
+        if ( isInPlayerFOV && distanceToPlayer < depth && distanceToPlayer >= MIN_DISTANCE_OBJECT ) {
+            float objectCeiling = (float)(gc.getRenderer().getH() / 2.0) - gc.getRenderer().getH() / distanceToPlayer;
+            float objectFloor = gc.getRenderer().getH() - objectCeiling;
+            float objectHeight = objectFloor - objectCeiling;
+            float objectAspectRatio = getObjectHeight(o.getId()) / getObjectWidth(o.getId());
+            float objectWidth = objectHeight / objectAspectRatio;
 
-            if ( isInPlayerFOV && distanceToPlayer < depth && distanceToPlayer >= MIN_DISTANCE_OBJECT * MIN_DISTANCE_OBJECT ) {
-                float objectCeiling = (float)(gc.getRenderer().getH() / 2.0) - gc.getRenderer().getH() / distanceToPlayer;
-                float objectFloor = gc.getRenderer().getH() - objectCeiling;
-                float objectHeight = objectFloor - objectCeiling;
-                float objectAspectRatio = getObjectHeight(object.getId()) / getObjectWidth(object.getId());
-                float objectWidth = objectHeight / objectAspectRatio;
+            float middleOfObject = (0.5f * (objectAngle / (FOV / 2.0f)) + 0.5f) * gc.getRenderer().getW();
 
-                float middleOfObject = (0.5f * (objectAngle / (FOV / 2.0f)) + 0.5f) * gc.getRenderer().getW();
+            // Draw the object
+            for ( float y = 0; y < objectHeight; y++ ) { // float y = 0; y < objectSize.getY(); y++
+                for ( float x = 0; x < objectWidth; x++ ) { // float x = 0; x < objectSize.getX(); x++
+                    // Create normalised sample coordinate
+                    float sampleX = x / objectWidth;
+                    float sampleY = y / objectHeight;
 
-                // Work out its position on the floor...
-                /*Vec2df floorPoint = new Vec2df(
-                        // Horizontal screen location is determined based on object angle relative to camera angle
-                        (0.5f * ((objectAngle / (FOV * 0.5f))) + 0.5f) * (float)gc.getRenderer().getH(),
-                        // Vertical screen location is projected distance
-                        // Si cambias la suma por una resta, se queda como en el 2n nivel
-                        ((float)gc.getRenderer().getH() / 2.0f) + ((float)gc.getRenderer().getH() / distanceToPlayer) / (float)Math.cos(objectAngle / 2.0f)
-                );
+                    // Get pixel from a suitable texture
+                    float niceAngle = playerAngle - o.getHeading() + 3.14159f / 4.0f;
+                    if ( niceAngle < 0 ) {
+                        niceAngle += 2.0f * 3.14159f;
+                    }
+                    if ( niceAngle > 2.0f * 3.14159f ) {
+                        niceAngle -= 2.0f * 3.14159f;
+                    }
+                    int color = selectObjectPixel(o.getId(), sampleX, sampleY, distanceToPlayer, niceAngle);
 
-                /*
-                * First we need the objects size, which we can scale into world space (maintaining aspecto ratio)
-                * and then project into screen space
-                */
-                /*Vec2df objectSize = new Vec2df(
-                        getObjectWidth(object.getId()) * (2.0f * (float) gc.getRenderer().getH()) / distanceToPlayer,
-                        getObjectHeight(object.getId()) * (2.0f * (float) gc.getRenderer().getH()) / distanceToPlayer
-                );*/
+                    /*
+                     * Check if the location is actually on screen (to not go OOB on depth buffer)
+                     * and if the pixel is indeed visible (has no transparency component)
+                     */
+                    int objectColumn = (int) (middleOfObject + x - (objectWidth / 2.0f));
 
-                /*
-                * Second we need the objects top left position in screen space, which is relative to the objects
-                * size and assumes the middle of the object is the location in world space
-                */
-                /*Vec2df objectTopLeft = new Vec2df(
-                        floorPoint.getX() - objectSize.getX() / 2.0f,
-                        floorPoint.getY() - objectSize.getY()
-                );*/
-
-                // Draw the object
-                for ( float y = 0; y < objectHeight; y++ ) { // float y = 0; y < objectSize.getY(); y++
-                    for ( float x = 0; x < objectWidth; x++ ) { // float x = 0; x < objectSize.getX(); x++
-                        // Create normalised sample coordinate
-                        float sampleX = x / objectWidth; // objectSize.getX()
-                        float sampleY = y / objectHeight; // objectSize.getY()
-
-                        // Get pixel from a suitable texture
-                        float niceAngle = playerAngle - object.getHeading() + 3.14159f / 4.0f;
-                        if ( niceAngle < 0 ) {
-                            niceAngle += 2.0f * 3.14159f;
-                        }
-                        if ( niceAngle > 2.0f * 3.14159f ) {
-                            niceAngle -= 2.0f * 3.14159f;
-                        }
-                        int color = selectObjectPixel(object.getId(), sampleX, sampleY, distanceToPlayer, niceAngle);
-
-                        // Calculate screen pixel location
-                        //Vec2di a = new Vec2di((int)(objectTopLeft.getX() + x), (int)(objectTopLeft.getY() + y));
-
-                        /*
-                        * Check if the location is actually on screen (to not go OOB on depth buffer)
-                        * and if the pixel is indeed visible (has no transparency component)
-                        */
-                        if ( (color >> 24) != 0x00 ) {
-                            int objectColumn = (int) (middleOfObject + x - (objectWidth / 2.0f));
-
-                            if (objectColumn >= 0 && objectColumn < gc.getRenderer().getW() && y >= 0 && y < gc.getRenderer().getH()) {
-                            //if ( a.getX() >= 0 && a.getX() < gc.getRenderer().getW() && a.getY() >= 0 && a.getY() < gc.getRenderer().getH() ) {
-                                if ( depthBuffer[objectColumn] >= distanceToPlayer ) { // depthBuffer[a.getX()] >= distanceToPlayer
-
-                                    /*float value = 1 - Math.min(distanceToPlayer / depth, 1);
-                                    int r = color >> 16 & 0xff;
-                                    int g = color >> 8 & 0xff;
-                                    int b = color & 0xff;
-
-                                    int shadedColor = (0xff << 24 | (int) (r * value) << 16 | (int) (g * value) << 8 | (int) (b * value));*/
-                                    //gc.getRenderer().setPixel(a.getX(), a.getY(), color);
-                                    gc.getRenderer().setPixel(objectColumn, (int) (objectCeiling + y), color);
-                                }
-                            }
+                    if (objectColumn >= 0 && objectColumn < gc.getRenderer().getW() && y >= 0 && y < gc.getRenderer().getH()) {
+                        if ( depthBuffer[objectColumn] >= distanceToPlayer ) { // depthBuffer[a.getX()] >= distanceToPlayer
+                            gc.getRenderer().setPixel(objectColumn, (int) (objectCeiling + y), color);
                         }
                     }
                 }
@@ -414,7 +377,7 @@ public abstract class RayCastingWorldGame implements AbstractGame {
     * Getters and Setters
     */
 
-    public HashMap<Integer, Object> getObjects() {
+    public HashMap<Integer, ObjectRayCastWorld> getObjects() {
         return objects;
     }
 

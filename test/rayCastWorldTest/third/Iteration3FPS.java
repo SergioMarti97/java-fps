@@ -7,7 +7,7 @@ import olcPGEApproach.gfx.images.ImageTile;
 import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
 import rayCastWorld.CellSide;
-import rayCastWorld.Object;
+import rayCastWorld.ObjectRayCastWorld;
 import rayCastWorld.RayCastingWorldGame;
 
 public class Iteration3FPS extends RayCastingWorldGame {
@@ -70,7 +70,7 @@ public class Iteration3FPS extends RayCastingWorldGame {
         imgWall = imageTile.getTileImage(3, 0);
         imgFloor = imageTile.getTileImage(0, 5);
 
-        objects.put(0, new Object(0, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f + 3.0f)));
+        objects.put(0, new ObjectRayCastWorld(0, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f + 3.0f)));
     }
 
     @Override

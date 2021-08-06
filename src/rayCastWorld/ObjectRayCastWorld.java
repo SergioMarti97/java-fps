@@ -6,7 +6,7 @@ import olcPGEApproach.vectors.points2d.Vec2df;
  * Base class for objects that
  * exits in world
  */
-public class Object {
+public class ObjectRayCastWorld {
 
     private int id = 0;
 
@@ -34,16 +34,16 @@ public class Object {
 
     private boolean isActive = true;
 
-    public Object() {
+    public ObjectRayCastWorld() {
 
     }
 
-    public Object(int id, Vec2df pos) {
+    public ObjectRayCastWorld(int id, Vec2df pos) {
         this.id = id;
         this.pos = pos;
     }
 
-    public Object(int id, Vec2df pos, Vec2df vel) {
+    public ObjectRayCastWorld(int id, Vec2df pos, Vec2df vel) {
         this.id = id;
         this.pos = pos;
         this.vel = vel;

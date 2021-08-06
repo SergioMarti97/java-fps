@@ -7,7 +7,7 @@ import olcPGEApproach.gfx.images.Image;
 import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
 import rayCastWorld.CellSide;
-import rayCastWorld.Object;
+import rayCastWorld.ObjectRayCastWorld;
 import rayCastWorld.TileHit;
 
 import java.util.Arrays;
@@ -20,7 +20,7 @@ public class Iteration2FPS implements AbstractGame {
 
     private Vec2di mapSize;
 
-    private HashMap<Integer, Object> objects;
+    private HashMap<Integer, ObjectRayCastWorld> objects;
 
     private final float fieldOfView = (float) (Math.PI / 3.0f);
 
@@ -83,7 +83,7 @@ public class Iteration2FPS implements AbstractGame {
         imgWall = new Image("/block.png");
         imgMario = new Image("/mario.png");
         objects = new HashMap<>();
-        objects.put(0, new Object(0, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f + 3.0f)));
+        objects.put(0, new ObjectRayCastWorld(0, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f + 3.0f)));
     }
 
     @Override
@@ -374,58 +374,60 @@ public class Iteration2FPS implements AbstractGame {
      * This method renders all objects on screen
      */
     private void renderObjects(GameContainer gc) {
-        for (Map.Entry<Integer, Object> e : objects.entrySet()) {
-            Object object = e.getValue();
+        for (Map.Entry<Integer, ObjectRayCastWorld> e : objects.entrySet()) {
+            renderObject(gc, e.getValue());
+        }
+    }
 
-            // Test if the object can be seen by the user
-            float vecX = object.getPos().getX() - playerPos.getX();
-            float vecY = object.getPos().getY() - playerPos.getY();
-            float distanceToPlayer = (float)Math.sqrt(vecX * vecX + vecY * vecY);
+    private void renderObject(GameContainer gc, ObjectRayCastWorld o) {
+        // Test if the object can be seen by the user
+        float vecX = o.getPos().getX() - playerPos.getX();
+        float vecY = o.getPos().getY() - playerPos.getY();
+        float distanceToPlayer = (float)Math.sqrt(vecX * vecX + vecY * vecY);
 
-            // Test if the object is in the field of view of the player
-            float eyeX = (float)Math.sin(playerAngle);
-            float eyeY = (float)Math.cos(playerAngle);
+        // Test if the object is in the field of view of the player
+        float eyeX = (float)Math.sin(playerAngle);
+        float eyeY = (float)Math.cos(playerAngle);
 
-            // Difference between to angles
-            float objectAngle = (float)(Math.atan2(eyeY, eyeX) - Math.atan2(vecY, vecX));
-            if ( objectAngle < -3.14159f ) {
-                objectAngle += 2.0f * 3.14159f;
-            }
-            if ( objectAngle > 3.14159f ) {
-                objectAngle -= 2.0f * 3.14159f;
-            }
-            boolean isInPlayerFOV = Math.abs(objectAngle) < (fieldOfView / 2.0f);
+        // Difference between to angles
+        float objectAngle = (float)(Math.atan2(eyeY, eyeX) - Math.atan2(vecY, vecX));
+        if ( objectAngle < -3.14159f ) {
+            objectAngle += 2.0f * 3.14159f;
+        }
+        if ( objectAngle > 3.14159f ) {
+            objectAngle -= 2.0f * 3.14159f;
+        }
+        boolean isInPlayerFOV = Math.abs(objectAngle) < (fieldOfView / 2.0f);
 
-            if ( isInPlayerFOV && distanceToPlayer < depth && distanceToPlayer >= 0.5f ) {
-                float objectCeiling = (float)(gc.getRenderer().getH() / 2.0) - gc.getRenderer().getH() / distanceToPlayer;
-                float objectFloor = gc.getRenderer().getH() - objectCeiling;
-                float objectHeight = objectFloor - objectCeiling;
-                float objectAspectRatio = (float)imgMario.getH() / (float)imgMario.getW();
-                float objectWidth = objectHeight / objectAspectRatio;
+        if ( isInPlayerFOV && distanceToPlayer < depth && distanceToPlayer >= 0.5f ) {
+            float objectCeiling = (float)(gc.getRenderer().getH() / 2.0) - gc.getRenderer().getH() / distanceToPlayer;
+            float objectFloor = gc.getRenderer().getH() - objectCeiling;
+            float objectHeight = objectFloor - objectCeiling;
+            float objectAspectRatio = (float)imgMario.getH() / (float)imgMario.getW();
+            float objectWidth = objectHeight / objectAspectRatio;
 
-                float middleOfObject = (0.5f * (objectAngle / (fieldOfView / 2.0f)) + 0.5f) * gc.getRenderer().getW();
+            float middleOfObject = (0.5f * (objectAngle / (fieldOfView / 2.0f)) + 0.5f) * gc.getRenderer().getW();
 
-                // Draw the object
-                for ( float x = 0; x < objectWidth; x++ ) {
-                    for ( float y = 0; y < objectHeight; y++ ) {
-                        float sampleX = x / objectWidth;
-                        float sampleY = y / objectHeight;
-                        int color = imgMario.getSample(sampleX, sampleY);
-                        if ( (color >> 24) != 0x00 ) {
-                            int objectColumn = (int) (middleOfObject + x - (objectWidth / 2.0f));
+            // Draw the object
+            for ( float x = 0; x < objectWidth; x++ ) {
+                for ( float y = 0; y < objectHeight; y++ ) {
+                    float sampleX = x / objectWidth;
+                    float sampleY = y / objectHeight;
+                    int color = imgMario.getSample(sampleX, sampleY);
+                    if ( (color >> 24) != 0x00 ) {
+                        int objectColumn = (int) (middleOfObject + x - (objectWidth / 2.0f));
 
-                            if (objectColumn >= 0 && objectColumn < gc.getRenderer().getW() && y >= 0 && y < gc.getRenderer().getH()) {
-                                if ( depthBuffer[objectColumn] >= distanceToPlayer ) {
+                        if (objectColumn >= 0 && objectColumn < gc.getRenderer().getW() && y >= 0 && y < gc.getRenderer().getH()) {
+                            if ( depthBuffer[objectColumn] >= distanceToPlayer ) {
 
-                                    float value = 1 - Math.min(distanceToPlayer / depth, 1);
-                                    int r = color >> 16 & 0xff;
-                                    int g = color >> 8 & 0xff;
-                                    int b = color & 0xff;
+                                float value = 1 - Math.min(distanceToPlayer / depth, 1);
+                                int r = color >> 16 & 0xff;
+                                int g = color >> 8 & 0xff;
+                                int b = color & 0xff;
 
-                                    int shadedColor = (0xff << 24 | (int) (r * value) << 16 | (int) (g * value) << 8 | (int) (b * value));
+                                int shadedColor = (0xff << 24 | (int) (r * value) << 16 | (int) (g * value) << 8 | (int) (b * value));
 
-                                    gc.getRenderer().setPixel(objectColumn, (int) (objectCeiling + y), shadedColor);
-                                }
+                                gc.getRenderer().setPixel(objectColumn, (int) (objectCeiling + y), shadedColor);
                             }
                         }
                     }
