@@ -1,6 +1,5 @@
 package rayCastWorld;
 
-import olcPGEApproach.AbstractGame;
 import olcPGEApproach.GameContainer;
 import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
@@ -12,13 +11,13 @@ import java.util.Map;
 /**
  * The ray cast world engine
  */
-public abstract class RayCastingWorldGame implements AbstractGame {
+public abstract class RayCastingWorldRender {
 
     protected HashMap<Integer, ObjectRayCastWorld> objects;
 
-    protected float depth = 32.0f;
-
     protected float[] depthBuffer;
+
+    protected float depth = 32.0f;
 
     protected Vec2df playerPos;
 
@@ -28,8 +27,7 @@ public abstract class RayCastingWorldGame implements AbstractGame {
 
     protected final float MIN_DISTANCE_OBJECT = 0.5f;
 
-    @Override
-    public void initialize(GameContainer gc) {
+    public RayCastingWorldRender(GameContainer gc) {
         depthBuffer = new float[gc.getRenderer().getW()];
         Arrays.fill(depthBuffer, 0.0f);
         objects = new HashMap<>();
@@ -309,8 +307,8 @@ public abstract class RayCastingWorldGame implements AbstractGame {
             float middleOfObject = (0.5f * (objectAngle / (FOV / 2.0f)) + 0.5f) * gc.getRenderer().getW();
 
             // Draw the object
-            for ( float y = 0; y < objectHeight; y++ ) { // float y = 0; y < objectSize.getY(); y++
-                for ( float x = 0; x < objectWidth; x++ ) { // float x = 0; x < objectSize.getX(); x++
+            for ( float y = 0; y < objectHeight; y++ ) {
+                for ( float x = 0; x < objectWidth; x++ ) {
                     // Create normalised sample coordinate
                     float sampleX = x / objectWidth;
                     float sampleY = y / objectHeight;
@@ -345,7 +343,6 @@ public abstract class RayCastingWorldGame implements AbstractGame {
      * This method renders the walls and the objects
      * of the world
      */
-    @Override
     public void render(GameContainer gc) {
         renderWalls(gc);
         renderObjects(gc);
