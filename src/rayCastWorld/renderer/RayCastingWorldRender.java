@@ -1,39 +1,50 @@
-package rayCastWorld;
+package rayCastWorld.renderer;
 
-import olcPGEApproach.GameContainer;
+import olcPGEApproach.gfx.Renderer;
 import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
+import rayCastWorld.CellSide;
+import rayCastWorld.ObjectRayCastWorld;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The ray cast world engine
+ * The ray cast world renderer
  */
-public abstract class RayCastingWorldRender {
+public abstract class RayCastingWorldRender extends Renderer {
 
-    protected HashMap<Integer, ObjectRayCastWorld> objects;
-
+    /**
+     * The depth buffer
+     */
     protected float[] depthBuffer;
 
-    protected float depth = 32.0f;
-
-    protected Vec2df playerPos;
-
-    protected float playerAngle;
-
-    protected final float FOV = (float) (Math.PI / 3.0f);
+    /**
+     * The camera to render the world
+     */
+    protected Camera camera;
 
     protected final float MIN_DISTANCE_OBJECT = 0.5f;
 
-    public RayCastingWorldRender(GameContainer gc) {
-        depthBuffer = new float[gc.getRenderer().getW()];
+    /**
+     * Constructor
+     * @param p the array of pixels of the image
+     * @param w the width of the screen
+     * @param h the height of the screen
+     */
+    public RayCastingWorldRender(int[] p, int w, int h) {
+        super(p, w, h);
+        depthBuffer = new float[super.getW()];
         Arrays.fill(depthBuffer, 0.0f);
-        objects = new HashMap<>();
+        camera = new Camera();
+    }
 
-        playerPos = new Vec2df();
-        playerAngle = 0.0f;
+    /**
+     * @param r the renderer
+     */
+    public RayCastingWorldRender(Renderer r) {
+        this(r.getP(), r.getW(), r.getH());
     }
 
     /**
@@ -71,7 +82,7 @@ public abstract class RayCastingWorldRender {
         float distanceWall = 0;
         boolean hitWall = false;
         float sampleX = 0.0f;
-        while ( !hitWall && distanceWall < depth ) {
+        while ( !hitWall && distanceWall < camera.getDepth() ) {
             if ( rayLength1D.getX() < rayLength1D.getY() ) {
                 mapCheck.addToX(stepDistance.getX());
                 distanceWall = rayLength1D.getX();
@@ -173,55 +184,39 @@ public abstract class RayCastingWorldRender {
     }
 
     /**
-     * ... then project polar coordinate (r, theta) from camera into screen (x, y), again
-     * compensating with cosine to remove fisheye
-     */
-    private Vec2df getTilePosMode7(Vec2df rayDirection, float rayAngle, float planeZ) {
-        return new Vec2df(
-                playerPos.getX() + rayDirection.getX() * planeZ * 2.0f / (float)Math.cos(rayAngle - playerAngle),
-                playerPos.getY() + rayDirection.getY() * planeZ * 2.0f / (float)Math.cos(rayAngle - playerAngle)
-        );
-    }
-
-    /**
      * This method render the walls, ceiling and floor
      */
-    private void renderWalls(GameContainer gc) {
-        for (int x = 0; x < gc.getRenderer().getW(); x++) {
+    private void renderWalls() {
+        for (int x = 0; x < super.getW(); x++) {
 
             // La dirección del rayo se podría calcular cada vez que se
             // modifica el ángulo del jugador
-            float rayAngle = (playerAngle - FOV / 2.0f) + ((float) x / (float) gc.getRenderer().getW()) * FOV;
-
-            Vec2df rayDirection = new Vec2df((float) Math.sin(rayAngle), (float) Math.cos(rayAngle));
+            camera.calRayDirection(x, super.getW());
 
             TileHit hit = new TileHit();
-            float distanceWall = depth;
-            if (castRayDDA(playerPos, rayDirection, hit)) {
-                Vec2df ray = new Vec2df(
-                        hit.getHitPos().getX() - playerPos.getX(),
-                        hit.getHitPos().getY() - playerPos.getY()
-                );
-                distanceWall = ray.mag() * (float) Math.cos(rayAngle - playerAngle);
+            float distanceWall = camera.getDepth();
+            if (castRayDDA(camera.getPos(), camera.getRayDirection(), hit)) {
+                distanceWall = camera.calDistance(hit);
             }
 
-            float ceiling = (gc.getRenderer().getH() / 2.0f) - (gc.getRenderer().getH() / distanceWall);
-            float floor = gc.getRenderer().getH() - ceiling;
+            float ceiling = (super.getH() / 2.0f) - (super.getH() / distanceWall);
+            float floor = super.getH() - ceiling;
             float wallHeight = floor - ceiling;
 
             // depth buffer
             depthBuffer[x] = distanceWall;
             
-            for (int y = 0; y < gc.getRenderer().getH(); y++) {
+            for (int y = 0; y < super.getH(); y++) {
                 if ( y <= (int)ceiling ) { // ceiling
-                    float planeZ = getPlaneZCeiling(y, gc.getRenderer().getH());
-                    Vec2df planeTilePos = getTilePosMode7(rayDirection, rayAngle, planeZ);
+                    float planeZ = getPlaneZCeiling(y, super.getH());
+                    camera.calRayDirection(x, this.getW());
+                    camera.calTilePosMode7(planeZ);
 
-                    int planeTileX = (int)planeTilePos.getX();
-                    int planeTileY = (int)planeTilePos.getY();
+                    int planeTileX = (int)camera.getTilePosMode7().getX();
+                    int planeTileY = (int)camera.getTilePosMode7().getY();
 
-                    float planeSampleX = planeTilePos.getX() - planeTileX;
-                    float planeSampleY = planeTilePos.getY() - planeTileY;
+                    float planeSampleX = camera.getTilePosMode7().getX() - planeTileX;
+                    float planeSampleY = camera.getTilePosMode7().getY() - planeTileY;
 
                     int sampleColor = selectSceneryPixel(
                             planeTileX,
@@ -230,7 +225,7 @@ public abstract class RayCastingWorldRender {
                             planeSampleX,
                             planeSampleY,
                             planeZ);
-                    gc.getRenderer().setPixel(x, y, sampleColor);
+                    super.setPixel(x, y, sampleColor);
                 } else if (y > (int)ceiling && y <= (int)floor ) { // wall
                     float sampleY = ( (float)y - ceiling ) / wallHeight;
 
@@ -241,16 +236,17 @@ public abstract class RayCastingWorldRender {
                             hit.getSampleX(),
                             sampleY,
                             distanceWall);
-                    gc.getRenderer().setPixel(x, y, sampleColor);
+                    super.setPixel(x, y, sampleColor);
                 } else { // floor
-                    float planeZ = getPlaneZFloor(y, gc.getRenderer().getH());
-                    Vec2df planeTilePos = getTilePosMode7(rayDirection, rayAngle, planeZ);
+                    float planeZ = getPlaneZFloor(y, super.getH());
+                    camera.calRayDirection(x, this.getW());
+                    camera.calTilePosMode7(planeZ);
 
-                    int planeTileX = (int)planeTilePos.getX();
-                    int planeTileY = (int)planeTilePos.getY();
+                    int planeTileX = (int)camera.getTilePosMode7().getX();
+                    int planeTileY = (int)camera.getTilePosMode7().getY();
 
-                    float planeSampleX = Math.abs(planeTilePos.getX() - planeTileX);
-                    float planeSampleY = Math.abs(planeTilePos.getY() - planeTileY);
+                    float planeSampleX = Math.abs(camera.getTilePosMode7().getX() - planeTileX);
+                    float planeSampleY = Math.abs(camera.getTilePosMode7().getY() - planeTileY);
 
                     int sampleColor = selectSceneryPixel(
                             planeTileX,
@@ -259,7 +255,7 @@ public abstract class RayCastingWorldRender {
                             planeSampleX,
                             planeSampleY,
                             planeZ);
-                    gc.getRenderer().setPixel(x, y, sampleColor);
+                    super.setPixel(x, y, sampleColor);
                 }
             }
         }
@@ -267,25 +263,28 @@ public abstract class RayCastingWorldRender {
 
     /**
      * This method renders all objects on screen
+     * @param objects the objects of the world to render
      */
-    private void renderObjects(GameContainer gc) {
+    private void renderObjects(HashMap<Integer, ObjectRayCastWorld> objects) {
         for (Map.Entry<Integer, ObjectRayCastWorld> e : objects.entrySet()) {
-            renderObject(gc, e.getValue());
+            renderObject(e.getValue(), camera);
         }
     }
 
     /**
      * This method render the object passed by parameter
+     * @param o the object of the world to render
+     * @param camera the camera
      */
-    private void renderObject(GameContainer gc, ObjectRayCastWorld o) {
+    private void renderObject(ObjectRayCastWorld o, Camera camera) {
         // Test if the object can be seen by the user
-        float vecX = o.getPos().getX() - playerPos.getX();
-        float vecY = o.getPos().getY() - playerPos.getY();
+        float vecX = o.getPos().getX() - camera.getPos().getX();
+        float vecY = o.getPos().getY() - camera.getPos().getY();
         float distanceToPlayer = (float)Math.sqrt(vecX * vecX + vecY * vecY);
 
         // Test if the object is in the field of view of the player
-        float eyeX = (float)Math.sin(playerAngle);
-        float eyeY = (float)Math.cos(playerAngle);
+        float eyeX = (float)Math.sin(camera.getHeading());
+        float eyeY = (float)Math.cos(camera.getHeading());
 
         // Difference between to angles
         float objectAngle = (float)(Math.atan2(eyeY, eyeX) - Math.atan2(vecY, vecX));
@@ -295,16 +294,16 @@ public abstract class RayCastingWorldRender {
         if ( objectAngle > 3.14159f ) {
             objectAngle -= 2.0f * 3.14159f;
         }
-        boolean isInPlayerFOV = Math.abs(objectAngle) < (FOV / 2.0f);
+        boolean isInPlayerFOV = Math.abs(objectAngle) < (camera.getFieldOfVision() / 2.0f);
 
-        if ( isInPlayerFOV && distanceToPlayer < depth && distanceToPlayer >= MIN_DISTANCE_OBJECT ) {
-            float objectCeiling = (float)(gc.getRenderer().getH() / 2.0) - gc.getRenderer().getH() / distanceToPlayer;
-            float objectFloor = gc.getRenderer().getH() - objectCeiling;
+        if ( isInPlayerFOV && distanceToPlayer < camera.getDepth() && distanceToPlayer >= camera.getMinDistToObject() ) {
+            float objectCeiling = (float)(super.getH() / 2.0) - super.getH() / distanceToPlayer;
+            float objectFloor = super.getH() - objectCeiling;
             float objectHeight = objectFloor - objectCeiling;
             float objectAspectRatio = getObjectHeight(o.getId()) / getObjectWidth(o.getId());
             float objectWidth = objectHeight / objectAspectRatio;
 
-            float middleOfObject = (0.5f * (objectAngle / (FOV / 2.0f)) + 0.5f) * gc.getRenderer().getW();
+            float middleOfObject = (0.5f * (objectAngle / (camera.getFieldOfVision() / 2.0f)) + 0.5f) * super.getW();
 
             // Draw the object
             for ( float y = 0; y < objectHeight; y++ ) {
@@ -314,7 +313,7 @@ public abstract class RayCastingWorldRender {
                     float sampleY = y / objectHeight;
 
                     // Get pixel from a suitable texture
-                    float niceAngle = playerAngle - o.getHeading() + 3.14159f / 4.0f;
+                    float niceAngle = camera.getHeading() - o.getHeading() + 3.14159f / 4.0f;
                     if ( niceAngle < 0 ) {
                         niceAngle += 2.0f * 3.14159f;
                     }
@@ -329,9 +328,9 @@ public abstract class RayCastingWorldRender {
                      */
                     int objectColumn = (int) (middleOfObject + x - (objectWidth / 2.0f));
 
-                    if (objectColumn >= 0 && objectColumn < gc.getRenderer().getW() && y >= 0 && y < gc.getRenderer().getH()) {
+                    if (objectColumn >= 0 && objectColumn < super.getW() && y >= 0 && y < super.getH()) {
                         if ( depthBuffer[objectColumn] >= distanceToPlayer ) { // depthBuffer[a.getX()] >= distanceToPlayer
-                            gc.getRenderer().setPixel(objectColumn, (int) (objectCeiling + y), color);
+                            super.setPixel(objectColumn, (int) (objectCeiling + y), color);
                         }
                     }
                 }
@@ -343,10 +342,12 @@ public abstract class RayCastingWorldRender {
      * This method renders the walls and the objects
      * of the world
      */
-    public void render(GameContainer gc) {
-        renderWalls(gc);
-        renderObjects(gc);
+    public void render(HashMap<Integer, ObjectRayCastWorld> objects) {
+        renderWalls();
+        //renderObjects(objects);
     }
+    
+    /* Abstract methods */
 
     public abstract boolean isLocationSolid(float x, float y);
 
@@ -374,32 +375,8 @@ public abstract class RayCastingWorldRender {
     * Getters and Setters
     */
 
-    public HashMap<Integer, ObjectRayCastWorld> getObjects() {
-        return objects;
-    }
-
-    public Vec2df getPlayerPos() {
-        return playerPos;
-    }
-
-    public void setPlayerPos(Vec2df playerPos) {
-        this.playerPos = playerPos;
-    }
-
-    public float getPlayerAngle() {
-        return playerAngle;
-    }
-
-    public void setPlayerAngle(float playerAngle) {
-        this.playerAngle = playerAngle;
-    }
-
-    public float getDepth() {
-        return depth;
-    }
-
-    public void setDepth(float depth) {
-        this.depth = depth;
+    public ObjectRayCastWorld getCamera() {
+        return camera;
     }
 
 }

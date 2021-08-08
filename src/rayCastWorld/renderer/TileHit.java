@@ -1,7 +1,8 @@
-package rayCastWorld;
+package rayCastWorld.renderer;
 
 import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
+import rayCastWorld.CellSide;
 
 /**
  * A convenient utility struct to store all the info required to understand how a ray

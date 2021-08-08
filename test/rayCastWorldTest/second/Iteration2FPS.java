@@ -8,7 +8,7 @@ import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
 import rayCastWorld.CellSide;
 import rayCastWorld.ObjectRayCastWorld;
-import rayCastWorld.TileHit;
+import rayCastWorld.renderer.TileHit;
 
 import java.util.Arrays;
 import java.util.HashMap;

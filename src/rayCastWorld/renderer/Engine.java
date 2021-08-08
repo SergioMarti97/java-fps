@@ -1,8 +1,10 @@
-package rayCastWorld;
+package rayCastWorld.renderer;
 
 import olcPGEApproach.gfx.Renderer;
 import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
+import rayCastWorld.CellSide;
+import rayCastWorld.ObjectRayCastWorld;
 
 import java.util.Arrays;
 import java.util.HashMap;

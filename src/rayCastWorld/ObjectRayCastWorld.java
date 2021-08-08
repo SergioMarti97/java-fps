@@ -8,53 +8,73 @@ import olcPGEApproach.vectors.points2d.Vec2df;
  */
 public class ObjectRayCastWorld {
 
-    private int id = 0;
+    protected int id = 0;
 
-    private Vec2df pos = new Vec2df();
+    protected Vec2df pos = new Vec2df();
 
-    private Vec2df vel = new Vec2df();
+    protected Vec2df vel = new Vec2df();
 
-    private float speed = 0.0f;
+    protected float speed = 0.0f;
 
-    private float heading = 0.0f;
+    protected float heading = 0.0f;
 
-    private float radius = 0.5f;
+    protected float radius = 0.5f;
 
-    private boolean visible = true;
+    protected boolean visible = true;
 
-    private boolean remove = false;
+    protected boolean remove = false;
 
-    private boolean collideWithScenery = false;
+    protected boolean collideWithScenery = false;
 
-    private boolean collideWithObject = false;
+    protected boolean collideWithObject = false;
 
-    private boolean notifyObjectCollision = false;
+    protected boolean notifyObjectCollision = false;
 
-    private boolean canBeMoved = true;
+    protected boolean canBeMoved = true;
 
-    private boolean isActive = true;
+    protected boolean isActive = true;
 
+    /**
+     * Void constructor
+     */
     public ObjectRayCastWorld() {
 
     }
 
+    /**
+     * Constructor
+     * @param id the id of the object
+     * @param pos the position of the object
+     */
     public ObjectRayCastWorld(int id, Vec2df pos) {
         this.id = id;
         this.pos = pos;
     }
 
+    /**
+     * Constructor
+     * @param id the id of the objects
+     * @param pos the position of the object
+     * @param vel the velocity of the object
+     */
     public ObjectRayCastWorld(int id, Vec2df pos, Vec2df vel) {
         this.id = id;
         this.pos = pos;
         this.vel = vel;
     }
 
-    public void walk(float walkSpeed) {
+    public void updateSpeed(float walkSpeed) {
         speed = walkSpeed;
-        vel = new Vec2df((float)Math.cos(heading), (float)Math.sin(heading) * speed);
+        vel.setX((float)Math.cos(heading));
+        vel.setY((float)Math.sin(heading));
     }
 
-    public void strafe(float strafeSpeed) {
+    public void walk(float walkSpeed) {
+        pos.addToX((float)Math.sin(heading) * walkSpeed);
+        pos.addToY((float)Math.cos(heading) * walkSpeed);
+    }
+
+    public void calStrafeSpeed(float strafeSpeed) {
         speed = strafeSpeed;
         vel = new Vec2df((float)Math.cos(heading), (float)Math.sin(heading) * speed);
         vel = (Vec2df) vel.perpendicular();
