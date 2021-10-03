@@ -7,7 +7,7 @@ import olcPGEApproach.gfx.images.Image;
 import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
 import rayCastWorld.CellSide;
-import rayCastWorld.ObjectRayCastWorld;
+import rayCastWorld.objects.Obj;
 import rayCastWorld.renderer.TileHit;
 
 import java.util.Arrays;
@@ -20,7 +20,7 @@ public class Iteration2FPS implements AbstractGame {
 
     private Vec2di mapSize;
 
-    private HashMap<Integer, ObjectRayCastWorld> objects;
+    private HashMap<Integer, Obj> objects;
 
     private final float fieldOfView = (float) (Math.PI / 3.0f);
 
@@ -83,7 +83,7 @@ public class Iteration2FPS implements AbstractGame {
         imgWall = new Image("/block.png");
         imgMario = new Image("/mario.png");
         objects = new HashMap<>();
-        objects.put(0, new ObjectRayCastWorld(0, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f + 3.0f)));
+        objects.put(0, new Obj(0, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f + 3.0f)));
     }
 
     @Override
@@ -374,12 +374,12 @@ public class Iteration2FPS implements AbstractGame {
      * This method renders all objects on screen
      */
     private void renderObjects(GameContainer gc) {
-        for (Map.Entry<Integer, ObjectRayCastWorld> e : objects.entrySet()) {
+        for (Map.Entry<Integer, Obj> e : objects.entrySet()) {
             renderObject(gc, e.getValue());
         }
     }
 
-    private void renderObject(GameContainer gc, ObjectRayCastWorld o) {
+    private void renderObject(GameContainer gc, Obj o) {
         // Test if the object can be seen by the user
         float vecX = o.getPos().getX() - playerPos.getX();
         float vecY = o.getPos().getY() - playerPos.getY();

@@ -1,4 +1,4 @@
-package rayCastWorld;
+package rayCastWorld.objects;
 
 import olcPGEApproach.vectors.points2d.Vec2df;
 
@@ -6,15 +6,11 @@ import olcPGEApproach.vectors.points2d.Vec2df;
  * Base class for objects that
  * exits in world
  */
-public class ObjectRayCastWorld {
+public class Obj {
 
     protected int id = 0;
 
     protected Vec2df pos = new Vec2df();
-
-    protected Vec2df vel = new Vec2df();
-
-    protected float speed = 0.0f;
 
     protected float heading = 0.0f;
 
@@ -37,7 +33,7 @@ public class ObjectRayCastWorld {
     /**
      * Void constructor
      */
-    public ObjectRayCastWorld() {
+    public Obj() {
 
     }
 
@@ -46,38 +42,9 @@ public class ObjectRayCastWorld {
      * @param id the id of the object
      * @param pos the position of the object
      */
-    public ObjectRayCastWorld(int id, Vec2df pos) {
+    public Obj(int id, Vec2df pos) {
         this.id = id;
         this.pos = pos;
-    }
-
-    /**
-     * Constructor
-     * @param id the id of the objects
-     * @param pos the position of the object
-     * @param vel the velocity of the object
-     */
-    public ObjectRayCastWorld(int id, Vec2df pos, Vec2df vel) {
-        this.id = id;
-        this.pos = pos;
-        this.vel = vel;
-    }
-
-    public void updateSpeed(float walkSpeed) {
-        speed = walkSpeed;
-        vel.setX((float)Math.cos(heading));
-        vel.setY((float)Math.sin(heading));
-    }
-
-    public void walk(float walkSpeed) {
-        pos.addToX((float)Math.sin(heading) * walkSpeed);
-        pos.addToY((float)Math.cos(heading) * walkSpeed);
-    }
-
-    public void calStrafeSpeed(float strafeSpeed) {
-        speed = strafeSpeed;
-        vel = new Vec2df((float)Math.cos(heading), (float)Math.sin(heading) * speed);
-        vel = (Vec2df) vel.perpendicular();
     }
 
     public void turn(float turnSpeed) {
@@ -88,12 +55,6 @@ public class ObjectRayCastWorld {
         if ( heading > 3.14159f ) {
             heading -= 2.0f * 3.14159f;
         }
-    }
-
-    public void stop() {
-        speed = 0;
-        vel.setX(0);
-        vel.setY(0);
     }
 
     // Getters & Setters
@@ -112,22 +73,6 @@ public class ObjectRayCastWorld {
 
     public void setPos(Vec2df pos) {
         this.pos = pos;
-    }
-
-    public Vec2df getVel() {
-        return vel;
-    }
-
-    public void setVel(Vec2df vel) {
-        this.vel = vel;
-    }
-
-    public float getSpeed() {
-        return speed;
-    }
-
-    public void setSpeed(float speed) {
-        this.speed = speed;
     }
 
     public float getHeading() {

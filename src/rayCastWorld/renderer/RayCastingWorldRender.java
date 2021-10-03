@@ -1,14 +1,20 @@
 package rayCastWorld.renderer;
 
+import javafx.concurrent.ScheduledService;
+import javafx.concurrent.Task;
+import javafx.util.Duration;
 import olcPGEApproach.gfx.Renderer;
 import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
 import rayCastWorld.CellSide;
-import rayCastWorld.ObjectRayCastWorld;
+import rayCastWorld.objects.MovingObj;
+import rayCastWorld.objects.Obj;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * The ray cast world renderer
@@ -16,16 +22,54 @@ import java.util.Map;
 public abstract class RayCastingWorldRender extends Renderer {
 
     /**
+     * There are two options to render the walls,
+     * the naive method and the multiple threads method
+     */
+    public enum RenderMethod {
+        NAIVE,
+        POOL_THREAD
+    }
+
+    /**
+     * The method to render the walls
+     */
+    protected RenderMethod renderMethod = RenderMethod.POOL_THREAD;
+
+    /**
      * The depth buffer
      */
     protected float[] depthBuffer;
+
+    /**
+     * A buffer to say if a column of the screen has been calculated
+     */
+    protected boolean[] doneBuffer;
 
     /**
      * The camera to render the world
      */
     protected Camera camera;
 
-    protected final float MIN_DISTANCE_OBJECT = 0.5f;
+    /**
+     * Needed service to work with threads. It isn't essential
+     * but in the original example what I follow is used
+     */
+    private ScheduledService<Boolean> scheduledService;
+
+    /**
+     * The pool of threads
+     */
+    private ThreadPoolExecutor executor;
+
+    protected int screenSection;
+
+    private long accTimeRenderWalls = 0L;
+
+    private int countRenderWalls = 0;
+
+    private long accTimeCastingRay = 0L;
+
+    private int countCastingRay = 0;
 
     /**
      * Constructor
@@ -35,9 +79,12 @@ public abstract class RayCastingWorldRender extends Renderer {
      */
     public RayCastingWorldRender(int[] p, int w, int h) {
         super(p, w, h);
-        depthBuffer = new float[super.getW()];
+        depthBuffer = new float[getW()];
         Arrays.fill(depthBuffer, 0.0f);
+        doneBuffer = new boolean[getW()];
+        Arrays.fill(doneBuffer, false);
         camera = new Camera();
+        screenSection = getW();
     }
 
     /**
@@ -48,11 +95,39 @@ public abstract class RayCastingWorldRender extends Renderer {
     }
 
     /**
+     * Needed method for the service
+     */
+    public void setScheduleService() {
+        if ( scheduledService == null ) {
+            scheduledService = new ScheduledService<Boolean>() {
+                @Override
+                protected Task<Boolean> createTask() {
+                    return new Task<Boolean>() {
+                        @Override
+                        protected Boolean call() {
+                            return executor.isTerminated();
+                        }
+                    };
+                }
+            };
+
+            scheduledService.setDelay(Duration.millis(500));
+            scheduledService.setPeriod(Duration.seconds(1));
+            scheduledService.setOnSucceeded(e -> {
+                if (scheduledService.getValue()) {
+                    scheduledService.cancel();
+                }
+            });
+        }
+    }
+
+    /**
      * DDA Algorithm
      */
     private boolean castRayDDA(Vec2df origin, Vec2df direction, TileHit hit) {
         float yDivideByX = direction.getY() / direction.getX();
         float xDivideByY = direction.getX() / direction.getY();
+
         Vec2df rayDelta = new Vec2df(
                 (float)Math.sqrt(1 + (yDivideByX * yDivideByX)),
                 (float)Math.sqrt(1 + (xDivideByY * xDivideByY))
@@ -185,79 +260,146 @@ public abstract class RayCastingWorldRender extends Renderer {
 
     /**
      * This method render the walls, ceiling and floor
+     *
+     * There are two parameters: the start x and the end x
+     * this is for subdivide the task of render walls
+     * in different sections of screen, each one for one
+     * thread
+     *
+     * @param starX the star x pixel to render the walls
+     * @param endX the end x pixel to render the walls
      */
-    private void renderWalls() {
-        for (int x = 0; x < super.getW(); x++) {
+    private synchronized void renderWallsSection(int starX, int endX) {
+        //long t1 = System.nanoTime();
+        for (int x = starX; x < endX; x++) {
+            if (doneBuffer[x] || depthBuffer[x] == 0.0f) {
+                camera.calRayDirection(x, getW());
 
-            // La dirección del rayo se podría calcular cada vez que se
-            // modifica el ángulo del jugador
-            camera.calRayDirection(x, super.getW());
-
-            TileHit hit = new TileHit();
-            float distanceWall = camera.getDepth();
-            if (castRayDDA(camera.getPos(), camera.getRayDirection(), hit)) {
-                distanceWall = camera.calDistance(hit);
-            }
-
-            float ceiling = (super.getH() / 2.0f) - (super.getH() / distanceWall);
-            float floor = super.getH() - ceiling;
-            float wallHeight = floor - ceiling;
-
-            // depth buffer
-            depthBuffer[x] = distanceWall;
-            
-            for (int y = 0; y < super.getH(); y++) {
-                if ( y <= (int)ceiling ) { // ceiling
-                    float planeZ = getPlaneZCeiling(y, super.getH());
-                    camera.calRayDirection(x, this.getW());
-                    camera.calTilePosMode7(planeZ);
-
-                    int planeTileX = (int)camera.getTilePosMode7().getX();
-                    int planeTileY = (int)camera.getTilePosMode7().getY();
-
-                    float planeSampleX = camera.getTilePosMode7().getX() - planeTileX;
-                    float planeSampleY = camera.getTilePosMode7().getY() - planeTileY;
-
-                    int sampleColor = selectSceneryPixel(
-                            planeTileX,
-                            planeTileY,
-                            CellSide.TOP,
-                            planeSampleX,
-                            planeSampleY,
-                            planeZ);
-                    super.setPixel(x, y, sampleColor);
-                } else if (y > (int)ceiling && y <= (int)floor ) { // wall
-                    float sampleY = ( (float)y - ceiling ) / wallHeight;
-
-                    int sampleColor = selectSceneryPixel(
-                            hit.getTilePos().getX(),
-                            hit.getTilePos().getY(),
-                            hit.getSide(),
-                            hit.getSampleX(),
-                            sampleY,
-                            distanceWall);
-                    super.setPixel(x, y, sampleColor);
-                } else { // floor
-                    float planeZ = getPlaneZFloor(y, super.getH());
-                    camera.calRayDirection(x, this.getW());
-                    camera.calTilePosMode7(planeZ);
-
-                    int planeTileX = (int)camera.getTilePosMode7().getX();
-                    int planeTileY = (int)camera.getTilePosMode7().getY();
-
-                    float planeSampleX = Math.abs(camera.getTilePosMode7().getX() - planeTileX);
-                    float planeSampleY = Math.abs(camera.getTilePosMode7().getY() - planeTileY);
-
-                    int sampleColor = selectSceneryPixel(
-                            planeTileX,
-                            planeTileY,
-                            CellSide.BOTTOM,
-                            planeSampleX,
-                            planeSampleY,
-                            planeZ);
-                    super.setPixel(x, y, sampleColor);
+                TileHit hit;
+                float distanceWall = camera.getDepth();
+                if (castRayDDA(camera.getPos(), camera.getRayDirection(), hit = new TileHit())) {
+                    distanceWall = camera.calDistance(hit);
                 }
+
+                int ceiling = (int) ((getH() / 2.0f) - (getH() / distanceWall));
+                int floor = getH() - ceiling;
+
+                depthBuffer[x] = distanceWall;
+
+                for (int y = 0; y < getH(); y++) {
+                    if (y <= ceiling) {
+                        renderCeiling(x, y);
+                    } else if (y <= floor) {
+                        renderWall(x, y, hit, ceiling, floor, distanceWall);
+                    } else {
+                        renderFloor(x, y);
+                    }
+                }
+                doneBuffer[x] = true;
             }
+        }
+        /*long t2 = System.nanoTime();
+        accTimeCastingRay += (t2 - t1);
+        countCastingRay++;
+        if (accTimeCastingRay > 1000000000L) {
+            System.out.printf("(1) Avg time taken to cast a ray: %f\n", accTimeCastingRay / (1000000000.0f * countCastingRay));
+            accTimeCastingRay -= 1000000000L;
+            countCastingRay = 0;
+        }*/
+    }
+
+    private void renderCeiling(int x, int y) {
+        float planeZ = getPlaneZCeiling(y, getH());
+        camera.calTilePosMode7(planeZ);
+
+        int floorPlaneTileX = (int)camera.getTilePosMode7().getX();
+        int floorPlaneTileY = (int)camera.getTilePosMode7().getY();
+
+        float planeSampleX = camera.getTilePosMode7().getX() - floorPlaneTileX;
+        float planeSampleY = camera.getTilePosMode7().getY() - floorPlaneTileY;
+
+        int sampleColor = selectSceneryPixel(
+                floorPlaneTileX,
+                floorPlaneTileY,
+                CellSide.TOP,
+                planeSampleX,
+                planeSampleY,
+                planeZ);
+        setPixel(x, y, sampleColor);
+    }
+
+    private void renderWall(int x, int y, TileHit hit, float ceiling, float floor, float distanceWall) {
+        float wallHeight = floor - ceiling;
+        float sampleY = ( (float)y - ceiling ) / wallHeight;
+        int sampleColor = selectSceneryPixel(
+                hit.getTilePos().getX(),
+                hit.getTilePos().getY(),
+                hit.getSide(),
+                hit.getSampleX(),
+                sampleY,
+                distanceWall);
+        setPixel(x, y, sampleColor);
+    }
+
+    private void renderFloor(int x, int y) {
+        float planeZ = getPlaneZFloor(y, getH());
+        camera.calTilePosMode7(planeZ);
+
+        int planeTileX = (int)camera.getTilePosMode7().getX();
+        int planeTileY = (int)camera.getTilePosMode7().getY();
+
+        float planeSampleX = Math.abs(camera.getTilePosMode7().getX() - planeTileX);
+        float planeSampleY = Math.abs(camera.getTilePosMode7().getY() - planeTileY);
+
+        int sampleColor = selectSceneryPixel(
+                planeTileX,
+                planeTileY,
+                CellSide.BOTTOM,
+                planeSampleX,
+                planeSampleY,
+                planeZ);
+        setPixel(x, y, sampleColor);
+    }
+
+    /**
+     * This method renders the walls, with multiple threads
+     */
+    private void renderWallThreads(int startX, int endX) {
+        executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        int numThreads = executor.getMaximumPoolSize() -1;
+        int sectionTotalWidth = endX - startX;
+        int subsectionWidth = sectionTotalWidth / numThreads;
+        for (int i = 0; i < numThreads; i++) {
+            int sX = subsectionWidth * i + startX;
+            int eX = subsectionWidth * (i + 1) + startX;
+            executor.execute(()-> renderWallsSection(sX, eX));
+        }
+        executor.shutdown();
+        scheduledService.restart();
+    }
+
+    /**
+     * This method renders the walls. There are
+     * two methods: naive and multithreading
+     * The naive renders one section of screen, from 0 to the screen width (full screen)
+     * The multithreading leans on the naive method, each thread renders a section of the screen
+     */
+    public void renderWalls() {
+        int sX = 0;
+        int eX = getW();
+        if (screenSection != getW()) {
+            int halfSectionWidth = screenSection / 2;
+            sX = (getW() / 2) - halfSectionWidth;
+            eX = (getW() / 2) + halfSectionWidth;
+        }
+        switch (renderMethod) {
+            case NAIVE:
+                renderWallsSection(sX, eX);
+                break;
+            case POOL_THREAD:
+                setScheduleService();
+                renderWallThreads(sX, eX);
+                break;
         }
     }
 
@@ -265,8 +407,8 @@ public abstract class RayCastingWorldRender extends Renderer {
      * This method renders all objects on screen
      * @param objects the objects of the world to render
      */
-    private void renderObjects(HashMap<Integer, ObjectRayCastWorld> objects) {
-        for (Map.Entry<Integer, ObjectRayCastWorld> e : objects.entrySet()) {
+    private void renderObjects(HashMap<Integer, Obj> objects) {
+        for (Map.Entry<Integer, Obj> e : objects.entrySet()) {
             renderObject(e.getValue(), camera);
         }
     }
@@ -276,7 +418,7 @@ public abstract class RayCastingWorldRender extends Renderer {
      * @param o the object of the world to render
      * @param camera the camera
      */
-    private void renderObject(ObjectRayCastWorld o, Camera camera) {
+    private void renderObject(Obj o, Camera camera) {
         // Test if the object can be seen by the user
         float vecX = o.getPos().getX() - camera.getPos().getX();
         float vecY = o.getPos().getY() - camera.getPos().getY();
@@ -297,13 +439,13 @@ public abstract class RayCastingWorldRender extends Renderer {
         boolean isInPlayerFOV = Math.abs(objectAngle) < (camera.getFieldOfVision() / 2.0f);
 
         if ( isInPlayerFOV && distanceToPlayer < camera.getDepth() && distanceToPlayer >= camera.getMinDistToObject() ) {
-            float objectCeiling = (float)(super.getH() / 2.0) - super.getH() / distanceToPlayer;
-            float objectFloor = super.getH() - objectCeiling;
+            float objectCeiling = (float)(getH() / 2.0) - getH() / distanceToPlayer;
+            float objectFloor = getH() - objectCeiling;
             float objectHeight = objectFloor - objectCeiling;
             float objectAspectRatio = getObjectHeight(o.getId()) / getObjectWidth(o.getId());
             float objectWidth = objectHeight / objectAspectRatio;
 
-            float middleOfObject = (0.5f * (objectAngle / (camera.getFieldOfVision() / 2.0f)) + 0.5f) * super.getW();
+            float middleOfObject = (0.5f * (objectAngle / (camera.getFieldOfVision() / 2.0f)) + 0.5f) * getW();
 
             // Draw the object
             for ( float y = 0; y < objectHeight; y++ ) {
@@ -328,9 +470,10 @@ public abstract class RayCastingWorldRender extends Renderer {
                      */
                     int objectColumn = (int) (middleOfObject + x - (objectWidth / 2.0f));
 
-                    if (objectColumn >= 0 && objectColumn < super.getW() && y >= 0 && y < super.getH()) {
-                        if ( depthBuffer[objectColumn] >= distanceToPlayer ) { // depthBuffer[a.getX()] >= distanceToPlayer
-                            super.setPixel(objectColumn, (int) (objectCeiling + y), color);
+                    if (objectColumn >= 0 && objectColumn < getW() && y >= 0 && y < getH()) {
+                        if ( depthBuffer[objectColumn] >= distanceToPlayer ) {
+                            depthBuffer[objectColumn] = distanceToPlayer;
+                            setPixel(objectColumn, (int) (objectCeiling + y), color);
                         }
                     }
                 }
@@ -342,9 +485,20 @@ public abstract class RayCastingWorldRender extends Renderer {
      * This method renders the walls and the objects
      * of the world
      */
-    public void render(HashMap<Integer, ObjectRayCastWorld> objects) {
+    public void render(HashMap<Integer, Obj> objects) {
+        long t1 = System.nanoTime();
         renderWalls();
-        //renderObjects(objects);
+        long t2 = System.nanoTime();
+        accTimeRenderWalls += (t2 - t1);
+        countRenderWalls++;
+        if (accTimeRenderWalls > 1000000000L) {
+            System.out.printf("(2) Time taken to render the walls: %f\n", accTimeRenderWalls / (countRenderWalls * 1000000000.0f));
+            accTimeRenderWalls -= 1000000000L;
+            countRenderWalls = 0;
+        }
+        renderObjects(objects);
+        Arrays.fill(depthBuffer, 0.0f);
+        Arrays.fill(doneBuffer, false);
     }
     
     /* Abstract methods */
@@ -375,7 +529,7 @@ public abstract class RayCastingWorldRender extends Renderer {
     * Getters and Setters
     */
 
-    public ObjectRayCastWorld getCamera() {
+    public MovingObj getCamera() {
         return camera;
     }
 

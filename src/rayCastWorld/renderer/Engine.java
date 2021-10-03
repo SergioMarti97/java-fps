@@ -4,7 +4,8 @@ import olcPGEApproach.gfx.Renderer;
 import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
 import rayCastWorld.CellSide;
-import rayCastWorld.ObjectRayCastWorld;
+import rayCastWorld.objects.MovingObj;
+import rayCastWorld.objects.Obj;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -19,7 +20,7 @@ public abstract class Engine {
     /**
      * The objects of the world
      */
-    private HashMap<Integer, ObjectRayCastWorld> mapObjects;
+    private HashMap<Integer, MovingObj> mapObjects;
 
     private Vec2di screenSize;
 
@@ -51,19 +52,19 @@ public abstract class Engine {
     }
 
     public void update(float elapsedTime) {
-        for (Map.Entry<Integer, ObjectRayCastWorld> e : mapObjects.entrySet()) {
-            ObjectRayCastWorld objectRayCastWorld = e.getValue();
+        for (Map.Entry<Integer, MovingObj> e : mapObjects.entrySet()) {
+            MovingObj obj = e.getValue();
 
-            if ( !objectRayCastWorld.isActive() ) {
+            if ( !obj.isActive() ) {
                 continue;
             }
 
             int steps = 1;
             float delta = elapsedTime;
-            Vec2df temp = new Vec2df(objectRayCastWorld.getVel());
+            Vec2df temp = new Vec2df(obj.getVel());
             temp.multiply(elapsedTime);
             float totalTravel = temp.mag2();
-            float totalRadius = objectRayCastWorld.getRadius() * objectRayCastWorld.getRadius();
+            float totalRadius = obj.getRadius() * obj.getRadius();
 
             if ( totalTravel >= totalRadius ) {
                 steps = (int)Math.ceil(totalTravel / totalRadius);
@@ -71,43 +72,43 @@ public abstract class Engine {
             }
 
             for ( int n = 0; n < steps; n++ ) {
-                Vec2df potentialPosition = new Vec2df(objectRayCastWorld.getPos());
-                potentialPosition.addToX(objectRayCastWorld.getVel().getX() * delta);
-                potentialPosition.addToY(objectRayCastWorld.getVel().getY() * delta);
+                Vec2df potentialPosition = new Vec2df(obj.getPos());
+                potentialPosition.addToX(obj.getVel().getX() * delta);
+                potentialPosition.addToY(obj.getVel().getY() * delta);
 
-                if ( objectRayCastWorld.isCollideWithObject() ) {
-                    for ( Map.Entry<Integer, ObjectRayCastWorld> e2 : mapObjects.entrySet() ) {
-                        ObjectRayCastWorld target = e2.getValue();
+                if ( obj.isCollideWithObject() ) {
+                    for ( Map.Entry<Integer, MovingObj> e2 : mapObjects.entrySet() ) {
+                        Obj target = e2.getValue();
 
                         if ( !target.isCollideWithObject() ) {
                             continue;
                         }
 
-                        if ( target.equals(objectRayCastWorld) ) {
+                        if ( target.equals(obj) ) {
                             continue;
                         }
 
-                        if ( doOverlap(objectRayCastWorld, target) ) {
-                            float dist = dist(objectRayCastWorld, target);
-                            float overlap = 1.0f * (dist - objectRayCastWorld.getRadius() - target.getRadius());
+                        if ( doOverlap(obj, target) ) {
+                            float dist = dist(obj, target);
+                            float overlap = 1.0f * (dist - obj.getRadius() - target.getRadius());
 
-                            potentialPosition.addToX(-(objectRayCastWorld.getPos().getX() - target.getPos().getX()) / dist * overlap);
-                            potentialPosition.addToY(-(objectRayCastWorld.getPos().getY() - target.getPos().getY()) / dist * overlap);
+                            potentialPosition.addToX(-(obj.getPos().getX() - target.getPos().getX()) / dist * overlap);
+                            potentialPosition.addToY(-(obj.getPos().getY() - target.getPos().getY()) / dist * overlap);
 
                             if ( target.isCanBeMoved() ) {
-                                target.getPos().addToX((objectRayCastWorld.getPos().getX() - target.getPos().getX()) / dist * overlap);
-                                target.getPos().addToY((objectRayCastWorld.getPos().getY() - target.getPos().getY()) / dist * overlap);
+                                target.getPos().addToX((obj.getPos().getX() - target.getPos().getX()) / dist * overlap);
+                                target.getPos().addToY((obj.getPos().getY() - target.getPos().getY()) / dist * overlap);
                             }
 
-                            if ( objectRayCastWorld.isNotifyObjectCollision() ) {
-                                handleObjectVsObject(objectRayCastWorld, target);
+                            if ( obj.isNotifyObjectCollision() ) {
+                                handleObjectVsObject(obj, target);
                             }
                         }
                     }
                 }
 
-                if ( objectRayCastWorld.isCollideWithScenery() ) {
-                    Vec2di currentCell = new Vec2di((int) objectRayCastWorld.getPos().getX(), (int) objectRayCastWorld.getPos().getY());
+                if ( obj.isCollideWithScenery() ) {
+                    Vec2di currentCell = new Vec2di((int) obj.getPos().getX(), (int) obj.getPos().getY());
                     Vec2di targetCell = new Vec2di((int)potentialPosition.getX(), (int)potentialPosition.getY());
                     Vec2di areaTopLeft = new Vec2di(
                             Math.min(currentCell.getX(), targetCell.getX()) - 1,
@@ -134,7 +135,7 @@ public abstract class Engine {
                                         nearestPoint.getX() - potentialPosition.getX(),
                                         nearestPoint.getY() - potentialPosition.getY()
                                 );
-                                float overlap = objectRayCastWorld.getRadius() - rayToNearest.mag();
+                                float overlap = obj.getRadius() - rayToNearest.mag();
 
                                 // todo comprobar si overlap "isnan"
 
@@ -143,7 +144,7 @@ public abstract class Engine {
                                     potentialPosition.addToX(-norm.getX() * overlap);
                                     potentialPosition.addToY(-norm.getY() * overlap);
 
-                                    if ( objectRayCastWorld.isNotifyObjectCollision() ) {
+                                    if ( obj.isNotifyObjectCollision() ) {
                                         CellSide side = CellSide.BOTTOM;
                                         if ( nearestPoint.getX() == (float)cell.getX() ) {
                                             side = CellSide.WEST;
@@ -158,7 +159,7 @@ public abstract class Engine {
                                             side = CellSide.SOUTH;
                                         }
 
-                                        handleObjectVsScenery(objectRayCastWorld, cell.getX(), cell.getY(), side,
+                                        handleObjectVsScenery(obj, cell.getX(), cell.getY(), side,
                                                 nearestPoint.getX() - (float)(cell.getX()),
                                                 nearestPoint.getY() - (float)(cell.getY()));
                                     }
@@ -168,22 +169,22 @@ public abstract class Engine {
                     }
                 }
 
-                objectRayCastWorld.setPos(potentialPosition);
+                obj.setPos(potentialPosition);
             }
         }
     }
 
-    public float dist2(ObjectRayCastWorld ob1, ObjectRayCastWorld ob2) {
+    public float dist2(Obj ob1, Obj ob2) {
         return (ob2.getPos().getX() - ob1.getPos().getX()) * (ob2.getPos().getX() - ob1.getPos().getX()) +
                 (ob2.getPos().getY() - ob1.getPos().getY()) * (ob2.getPos().getY() - ob1.getPos().getY());
     }
 
-    public float dist(ObjectRayCastWorld ob1, ObjectRayCastWorld ob2) {
+    public float dist(Obj ob1, Obj ob2) {
         // todo hay metodos matematicos que son más optimos para raiz, seno y coseno
         return (float) Math.sqrt(dist2(ob1, ob2));
     }
 
-    public boolean doOverlap(ObjectRayCastWorld ob1, ObjectRayCastWorld ob2) {
+    public boolean doOverlap(Obj ob1, Obj ob2) {
         return dist2(ob1, ob2) <= (ob1.getRadius() + ob2.getRadius()) * (ob1.getRadius() + ob2.getRadius());
     }
 
@@ -273,16 +274,16 @@ public abstract class Engine {
     }
 
     private void renderObjects(Renderer renderer) {
-        for ( Map.Entry<Integer, ObjectRayCastWorld> entry : mapObjects.entrySet() ) {
-            ObjectRayCastWorld objectRayCastWorld = entry.getValue();
+        for ( Map.Entry<Integer, MovingObj> entry : mapObjects.entrySet() ) {
+            Obj obj = entry.getValue();
 
-            if ( !objectRayCastWorld.isVisible() ) {
+            if ( !obj.isVisible() ) {
                 continue;
             }
 
             Vec2df vecObject = new Vec2df(
-                    objectRayCastWorld.getPos().getX() - cameraPos.getX(),
-                    objectRayCastWorld.getPos().getY() - cameraPos.getY()
+                    obj.getPos().getX() - cameraPos.getX(),
+                    obj.getPos().getY() - cameraPos.getY()
             );
 
             float distanceToObject = vecObject.mag();
@@ -304,8 +305,8 @@ public abstract class Engine {
                 );
 
                 Vec2df objectSize = new Vec2df(
-                        (float)(getObjectWidth(objectRayCastWorld.getId())),
-                        (float)(getObjectHeight(objectRayCastWorld.getId()))
+                        (float)(getObjectWidth(obj.getId())),
+                        (float)(getObjectHeight(obj.getId()))
                 );
 
                 objectSize.multiply(2.0f * floatScreenSize.getY());
@@ -321,14 +322,14 @@ public abstract class Engine {
                         float sampleX = x / objectSize.getX();
                         float sampleY = y / objectSize.getY();
 
-                        float niceAngle = cameraHeading - objectRayCastWorld.getHeading() + 3.14159f / 4.0f;
+                        float niceAngle = cameraHeading - obj.getHeading() + 3.14159f / 4.0f;
                         if ( niceAngle < 0 ) {
                             niceAngle += 2.0f * 3.14159f;
                         }
                         if ( niceAngle > 2.0f * 3.14159f ) {
                             niceAngle -= 2.0f * 3.14159f;
                         }
-                        int pixel = selectObjectPixel(objectRayCastWorld.getId(), sampleX, sampleY, distanceToObject, niceAngle);
+                        int pixel = selectObjectPixel(obj.getId(), sampleX, sampleY, distanceToObject, niceAngle);
 
                         Vec2di a = new Vec2di(
                                 (int)(objectTopLeft.getX() + x),
@@ -480,8 +481,8 @@ public abstract class Engine {
 
     public abstract int selectObjectPixel(int id, float sampleX, float sampleY, float distance, float angle);
 
-    public abstract void handleObjectVsScenery(ObjectRayCastWorld objectRayCastWorld, int tileX, int tileY, CellSide side, float offsetX, float offsetY);
+    public abstract void handleObjectVsScenery(Obj obj, int tileX, int tileY, CellSide side, float offsetX, float offsetY);
 
-    public abstract void handleObjectVsObject(ObjectRayCastWorld obj1, ObjectRayCastWorld obj2);
+    public abstract void handleObjectVsObject(Obj obj1, Obj obj2);
 
 }

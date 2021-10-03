@@ -1,24 +1,26 @@
-package rayCastWorldTest;
+package physics;
 
+import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.image.ImageView;
 import olcPGEApproach.GameContainer;
-import rayCastWorldTest.third.Iteration3FPS;
+import physics.rectangles.PhysicsTestGame;
 
 import java.net.URL;
 import java.util.ResourceBundle;
 
-public class Controller implements Initializable {
+public class PhysicsController implements Initializable {
 
-    public ImageView imgView;
+    @FXML
+    private ImageView imgView;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        Iteration3FPS fps = new Iteration3FPS();
+        PhysicsTestGame game = new PhysicsTestGame();
         GameContainer gc = new GameContainer(
-                fps,
-                1280, // 426
-                820, // 240
+                game,
+                640,
+                360,
                 imgView
         );
         imgView.setImage(gc.getImg());

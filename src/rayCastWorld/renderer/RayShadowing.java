@@ -30,7 +30,7 @@ public class RayShadowing {
      * @return given percentage between 0 for full shadow or 1 for original color
      */
     public static float calShadow(float depth, float maxDepth) {
-        return 1.0f - Math.min(depth / maxDepth, 1.0f);
+        return Math.min(depth / maxDepth, 1.0f);
     }
 
     /**

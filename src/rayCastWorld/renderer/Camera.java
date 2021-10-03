@@ -1,13 +1,13 @@
 package rayCastWorld.renderer;
 
 import olcPGEApproach.vectors.points2d.Vec2df;
-import rayCastWorld.ObjectRayCastWorld;
+import rayCastWorld.objects.MovingObj;
 
 /**
  * This class represents a camera
  * of the ray casting world engine
  */
-public class Camera extends ObjectRayCastWorld {
+public class Camera extends MovingObj {
 
     /**
      * The field of vision of the camera, on radians

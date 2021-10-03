@@ -13,7 +13,7 @@ import olcPGEApproach.gfx.images.ImageTile;
 import olcPGEApproach.vectors.points2d.Vec2df;
 import olcPGEApproach.vectors.points2d.Vec2di;
 import rayCastWorld.CellSide;
-import rayCastWorld.ObjectRayCastWorld;
+import rayCastWorld.objects.Obj;
 import rayCastWorld.renderer.RayCastingWorldRender;
 
 import java.net.URL;
@@ -76,7 +76,7 @@ public class MultithreadingController implements Initializable {
              */
             private Image imgMario;
 
-            private HashMap<Integer, ObjectRayCastWorld> objects;
+            private HashMap<Integer, Obj> objects;
 
             @Override
             public void initialize(GameContainer gc) {
@@ -194,7 +194,7 @@ public class MultithreadingController implements Initializable {
                 imgFloor = imageTile.getTileImage(0, 5);
 
                 objects = new HashMap<>();
-                objects.put(0, new ObjectRayCastWorld(0, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f + 3.0f)));
+                objects.put(0, new Obj(0, new Vec2df(mapSize.getX() / 2.0f, mapSize.getY() / 2.0f + 3.0f)));
 
             }
 
