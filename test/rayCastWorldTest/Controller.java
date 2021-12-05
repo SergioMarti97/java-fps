@@ -17,11 +17,27 @@ public class Controller implements Initializable {
         Iteration3FPS fps = new Iteration3FPS();
         GameContainer gc = new GameContainer(
                 fps,
-                1280, // 426
-                820, // 240
+                426, // 426
+                240, // 240
                 imgView
         );
         imgView.setImage(gc.getImg());
+        /*imgView.setOnKeyPressed((value)->{
+            if (value.getCode() == KeyCode.E) {
+                Stage stage = new Stage();
+                stage.setTitle("Options");
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("options/LayoutOptions.fxml"));
+                Parent root;
+                try {
+                    root = loader.load();
+                    stage.setScene(new Scene(root));
+                    stage.initModality(Modality.WINDOW_MODAL);
+                    stage.show();
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        });*/
         gc.getTimer().start();
     }
 

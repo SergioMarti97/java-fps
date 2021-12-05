@@ -1,6 +1,11 @@
 package rayCastWorldTest.third;
 
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import olcPGEApproach.AbstractGame;
 import olcPGEApproach.GameContainer;
 import olcPGEApproach.gfx.images.Image;
@@ -13,6 +18,7 @@ import rayCastWorld.objects.Obj;
 import rayCastWorld.objects.SourceLight;
 import rayCastWorld.renderer.RayCastingWorldRender;
 import rayCastWorld.renderer.RayShadowing;
+import rayCastWorldTest.options.OptionsController;
 
 import java.util.HashMap;
 import java.util.Random;
@@ -244,6 +250,26 @@ public class Iteration3FPS implements AbstractGame {
 
         if ( gc.getInput().isKeyHeld(KeyCode.SPACE) ) {
             setTextures(imageTile);
+        }
+
+        if (gc.getInput().isKeyHeld(KeyCode.E)) {
+            gc.getTimer().stop();
+            Stage stage = new Stage();
+            stage.setTitle("Options");
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("../options/LayoutOptions.fxml"));
+            Parent root;
+            try {
+                root = loader.load();
+                stage.setScene(new Scene(root));
+                stage.initModality(Modality.WINDOW_MODAL);
+                OptionsController optionsController = loader.getController();
+                stage.show();
+                if (optionsController.isFinish()) {
+                    gc.getTimer().start();
+                }
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
         }
 
 

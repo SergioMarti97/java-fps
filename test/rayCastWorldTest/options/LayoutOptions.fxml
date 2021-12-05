@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+
+<VBox alignment="TOP_CENTER" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="rayCastWorldTest.options.OptionsController">
+   <Label text="Options">
+      <font>
+         <Font name="System Bold" size="20.0"/>
+      </font>
+      <VBox.margin>
+         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+      </VBox.margin>
+   </Label>
+   <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="400.0">
+      <VBox.margin>
+         <Insets bottom="5.0" top="5.0"/>
+      </VBox.margin>
+      <Label text="Screen Resolution">
+         <VBox.margin>
+            <Insets bottom="2.5" left="5.0" right="5.0" top="2.5"/>
+         </VBox.margin>
+         <font>
+            <Font name="System Bold" size="12.0"/>
+         </font>
+      </Label>
+      <ComboBox fx:id="comboBoxResolution" prefWidth="200.0">
+         <VBox.margin>
+            <Insets bottom="2.5" left="5.0" right="5.0" top="2.5"/>
+         </VBox.margin>
+      </ComboBox>
+      <HBox alignment="CENTER_LEFT" prefWidth="300.0">
+         <VBox.margin>
+            <Insets bottom="5.0"/>
+         </VBox.margin>
+         <Label text="Width:">
+            <HBox.margin>
+               <Insets bottom="2.5" left="5.0" right="1.25" top="5.0"/>
+            </HBox.margin>
+         </Label>
+         <TextField fx:id="txtFieldScreenWidth">
+            <HBox.margin>
+               <Insets bottom="2.5" left="1.25" right="2.5" top="5.0"/>
+            </HBox.margin>
+         </TextField>
+         <Label text="Height:">
+            <HBox.margin>
+               <Insets bottom="2.5" left="2.5" right="1.25" top="5.0"/>
+            </HBox.margin>
+         </Label>
+         <TextField fx:id="txtFieldScreenHeight">
+            <HBox.margin>
+               <Insets bottom="2.5" left="1.25" right="5.0" top="5.0"/>
+            </HBox.margin>
+         </TextField>
+      </HBox>
+      <Label text="Field of Vision">
+         <VBox.margin>
+            <Insets bottom="2.5" left="5.0" right="5.0" top="5.0"/>
+         </VBox.margin>
+         <font>
+            <Font name="System Bold" size="12.0"/>
+         </font>
+      </Label>
+      <Slider fx:id="sliderFOV">
+         <VBox.margin>
+            <Insets bottom="2.5" left="5.0" right="5.0" top="2.5"/>
+         </VBox.margin>
+      </Slider>
+      <Label fx:id="lblFOV" text="FOV">
+         <VBox.margin>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="2.5"/>
+         </VBox.margin>
+      </Label>
+      <Label text="Rendering Width">
+         <font>
+            <Font name="System Bold" size="12.0"/>
+         </font>
+         <VBox.margin>
+            <Insets bottom="0.5" left="5.0" right="5.0" top="5.0"/>
+         </VBox.margin>
+      </Label>
+      <Slider fx:id="sliderRenderingWidth">
+         <VBox.margin>
+            <Insets bottom="2.5" left="5.0" right="5.0" top="2.5"/>
+         </VBox.margin>
+      </Slider>
+      <Label fx:id="lblRenderingWidth" text="Rendering Width">
+         <VBox.margin>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="2.5"/>
+         </VBox.margin>
+      </Label>
+      <Label text="Rendering Method">
+         <font>
+            <Font name="System Bold" size="12.0"/>
+         </font>
+         <VBox.margin>
+            <Insets bottom="2.5" left="5.0" right="5.0" top="5.0"/>
+         </VBox.margin>
+      </Label>
+      <ComboBox fx:id="comboBoxRenderingMethod" prefWidth="200.0">
+         <VBox.margin>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="2.5"/>
+         </VBox.margin>
+      </ComboBox>
+   </VBox>
+</VBox>

@@ -33,7 +33,7 @@ public abstract class RayCastingWorldRender extends Renderer {
     /**
      * The method to render the walls
      */
-    protected RenderMethod renderMethod = RenderMethod.POOL_THREAD;
+    protected RenderMethod renderMethod = RenderMethod.NAIVE;
 
     /**
      * The depth buffer
